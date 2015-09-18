@@ -73,10 +73,14 @@ Python 2.6 will *not* work.
 
 ``txsocketio`` has the following dependencies (which will be installed automatically):
 
+* |autobahn|_
+
 * |future|_
 
 * |twisted|_
 
+.. |autobahn| replace:: ``autobahn``
+.. _`autobahn`: http://autobahn.ws/python/
 .. |future| replace:: ``future``
 .. _`future`: http://python-future.org/
 .. |twisted| replace:: ``twisted``

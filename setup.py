@@ -51,6 +51,7 @@ from os.path import (
 __all__ = ()
 
 INSTALL_REQUIRES = (
+    'autobahn',
     'future',
     'twisted',
 )
