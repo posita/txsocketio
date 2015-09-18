@@ -61,7 +61,7 @@ _MY_DIR = dirname(getframeinfo(currentframe()).filename)
 #---- Initialization -----------------------------------------------------
 
 _namespace = {
-    '_version_path': ospath_join(_MY_DIR, '_txsocketio', 'version.py'),
+    '_version_path': ospath_join(_MY_DIR, 'txsocketio', 'version.py'),
 }
 
 if isfile(_namespace['_version_path']):

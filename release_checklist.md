@@ -14,13 +14,13 @@ If such a file did not accompany this software, then please contact the author b
 
 - [ ] `git checkout -b X.Y.Z-release`
 
-- [ ] Set version in [`_txsocketio/version.py`](_txsocketio/version.py)
+- [ ] Set version in [`txsocketio/version.py`](txsocketio/version.py)
 
 ```diff
-diff --git a/_txsocketio/version.py b/_txsocketio/version.py
+diff --git a/txsocketio/version.py b/txsocketio/version.py
 index 0123456..fedcba9 100644
---- a/_txsocketio/version.py
-+++ b/_txsocketio/version.py
+--- a/txsocketio/version.py
++++ b/txsocketio/version.py
 @@ -25,5 +25,5 @@ from __future__ import (
 
  __all__ = ()

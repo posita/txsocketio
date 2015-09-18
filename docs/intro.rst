@@ -29,7 +29,7 @@ If such a file did not accompany this software, then please contact the author b
 Introduction
 ============
 
-``txsocketio`` is a :doc:`pure Python module <py>` for accessing `Socket.IO`_ services from `Twisted`_.
+``txsocketio`` is a :doc:`pure Python module <py>` for accessing `Socket.IO`_ v1.x services from `Twisted`_.
 
 .. _`Socket.IO`: http://socket.io/
 .. _`Twisted`: https://twistedmatrix.com/
@@ -50,18 +50,20 @@ Installation can be performed via ``pip`` (which will download and install the `
   % pip install txsocketio
   ...
 
-Alternately, you can download the sources (e.g., `from GitHub <https://github.com/posita/py-txsocketio>`__) and run ``setup.py``:
+Alternately, you can download the sources (e.g., `from GitHub <https://github.com/posita/txsocketio>`__) and run ``setup.py``:
 
 .. code-block:: sh
 
-  % git clone https://github.com/posita/py-txsocketio
+  % git clone https://github.com/posita/txsocketio
   ...
-  % cd py-txsocketio
+  % cd txsocketio
   % python setup.py install
   ...
 
 Requirements
 ------------
+
+The service you want to consume must use v1.x of the Socket.IO protocol. Earlier versions are not supported.
 
 A modern version of Python is required:
 
