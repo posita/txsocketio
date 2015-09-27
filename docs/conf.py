@@ -13,11 +13,13 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import os
-import shlex
+import os.path
 import sys
-sys.path.append('..')
+sys.path.append(os.path.pardir)
 from setup import _SETUP_ARGS
+# _setup = {}
+# execfile(os.path.join(os.getcwd(), os.path.pardir, 'setup.py'), _setup, _setup)
+# _SETUP_ARGS = _setup['_SETUP_ARGS']
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -297,4 +299,10 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'python': {
+        'https://docs.python.org/': None,
+        'https://twisted.readthedocs.org/': None,
+        'http://python-future.org/': None,
+    },
+}

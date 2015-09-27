@@ -36,6 +36,7 @@ htmlcov
 *.py[co]
 *.so
 dropin.cache
+node_modules
 
 # Packages
 *.7z

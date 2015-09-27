@@ -1,4 +1,4 @@
-#-*- encoding: utf-8; grammar-ext: py; mode: python -*-
+#-*- encoding: utf-8; grammar-ext: py; mode: python test-case-name: txsocketio.test_baseuri -*-
 
 #=========================================================================
 """
@@ -25,33 +25,49 @@ from future.builtins.disabled import * # pylint: disable=redefined-builtin,unuse
 
 #---- Imports ------------------------------------------------------------
 
-from twisted.trial.unittest import TestCase
+from posixpath import join as posixpath_join
+from twisted.python.urlpath import URLPath
 
 #---- Constants ----------------------------------------------------------
 
-__all__ = ()
+__all__ = (
+    'BaseUrl',
+)
 
 #---- Classes ------------------------------------------------------------
 
 #=========================================================================
-class TxSocketIoTestCase(TestCase):
+class BaseUrl(URLPath):
+    """
+    Basically a :class:`twisted.python.urlpath.URLPath` with a
+    :meth:`join` method similar to :func:`posixpath.join`.
+    """
 
-    #---- Public hook methods --------------------------------------------
-
-    #=====================================================================
-    def setUp(self):
-        super().setUp() # pylint: disable=missing-super-argument
-
-    #=====================================================================
-    def tearDown(self):
-        super().tearDown() # pylint: disable=missing-super-argument
+    #---- Public methods -------------------------------------------------
 
     #=====================================================================
-    def test_todo(self):
-        pass
+    def join(self, *p):
+        """
+        Calls :func:`posixpath.join` on
+        :attr:`~twisted.python.urlpath.URLPath.path` followed by each item
+        in `p`.
 
-#---- Initialization -----------------------------------------------------
+        :param iterable p: an iterable of the parts of the path to join
 
-if __name__ == '__main__':
-    from unittest import main
-    main()
+        :returns: a new :class:`BaseUrl` with the joined path
+        """
+        parts = [ self.path ]
+        parts.extend(p)
+
+        return self._pathMod(parts, False)
+
+    #---- Private hook methods -------------------------------------------
+
+    #=====================================================================
+    def _pathMod(self, newpathsegs, keepQuery):
+        if keepQuery:
+            query = self.query
+        else:
+            query = b''
+
+        return URLPath(self.scheme, self.netloc, posixpath_join(*newpathsegs), query)

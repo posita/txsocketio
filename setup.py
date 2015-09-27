@@ -40,6 +40,7 @@ from inspect import (
     currentframe,
     getframeinfo,
 )
+from os import environ
 from os.path import (
     dirname,
     isfile,
@@ -108,4 +109,5 @@ _SETUP_ARGS = {
 }
 
 if __name__ == '__main__':
+    environ['COVERAGE_PROCESS_START'] = environ.get('COVERAGE_PROCESS_START', ospath_join(_MY_DIR, '.coveragerc'))
     setup(**_SETUP_ARGS)

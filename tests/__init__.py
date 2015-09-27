@@ -33,6 +33,7 @@ from logging import (
     getLevelName as logging_getLevelName,
     getLogger,
 )
+from twisted.trial.unittest import TestCase
 
 #---- Constants ----------------------------------------------------------
 
@@ -43,6 +44,12 @@ _LOG_LVL = CRITICAL + 1 if not _LOG_LVL else logging_getLevelName(_LOG_LVL)
 _LOG_FMT = environ.get('_TXSOCKETIO_LOG_FMT')
 
 #---- Initialization -----------------------------------------------------
+
+# Python 3.4 complains that assertRaisesRegexp is deprecated in favor of
+# assertRaisesRegex, which Python 2.7's unittest doesn't have; this
+# monkey patch fixes all that
+if not hasattr(TestCase, 'assertRaisesRegex'):
+    TestCase.assertRaisesRegex = TestCase.assertRaisesRegexp
 
 # Suppress logging messages during testing
 logging_basicConfig(format=_LOG_FMT)

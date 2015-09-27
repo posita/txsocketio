@@ -35,5 +35,5 @@ Contents
    :maxdepth: 3
 
    intro
-   py
+   txsocketio
    contrib
