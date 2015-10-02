@@ -1,4 +1,4 @@
-#-*-encoding: utf-8-*-
+#-*- encoding: utf-8 -*-
 
 #=========================================================================
 # Copyright (c) 2015 Matt Bogosian <mtb19@columbia.edu>.
@@ -25,6 +25,9 @@ _trial_temp
 build
 dist
 docs/_build
+docs/modules.rst
+docs/txsocketio.rst
+docs/txsocketio.*.rst
 htmlcov
 
 # Compiled objects
@@ -51,8 +54,10 @@ node_modules
 *.zip
 
 # Logs, databases, etc.
+*.err
 *.log
 *.log.[0-9]*
+*.out
 *.pid
 *.sqlite
 nohup.out

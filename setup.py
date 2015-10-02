@@ -26,50 +26,44 @@ from __future__ import (
 
 #---- Imports ------------------------------------------------------------
 
-from setuptools import (
-    find_packages,
-    setup,
-)
+import setuptools
 
 # See this e-mail thread:
 # <http://www.eby-sarna.com/pipermail/peak/2010-May/003348.html>
 import logging # pylint: disable=unused-import
 import multiprocessing # pylint: disable=unused-import
 
-from inspect import (
-    currentframe,
-    getframeinfo,
-)
-from os import environ
-from os.path import (
-    dirname,
-    isfile,
-    join as ospath_join,
-)
+import inspect
+import os
+from os import path
+import sys
 
 #---- Constants ----------------------------------------------------------
 
 __all__ = ()
 
-INSTALL_REQUIRES = (
+INSTALL_REQUIRES = [
     'autobahn',
     'future',
     'twisted',
-)
+]
 
-_MY_DIR = dirname(getframeinfo(currentframe()).filename)
+if sys.version_info[0] <= 2:
+    INSTALL_REQUIRES.append('mock')
+
+_MY_DIR = path.dirname(inspect.getframeinfo(inspect.currentframe()).filename)
 
 #---- Initialization -----------------------------------------------------
 
 _namespace = {
-    '_version_path': ospath_join(_MY_DIR, 'txsocketio', 'version.py'),
+    '_version_path': path.join(_MY_DIR, 'txsocketio', 'version.py'),
 }
 
-if isfile(_namespace['_version_path']):
+if path.isfile(_namespace['_version_path']):
     with open(_namespace['_version_path']) as _version_file:
         exec(compile(_version_file.read(), _namespace['_version_path'], 'exec'), _namespace, _namespace) # pylint: disable=exec-used
 
-with open(ospath_join(_MY_DIR, 'README.rst')) as _readme_file:
+with open(path.join(_MY_DIR, 'README.rst')) as _readme_file:
     README = _readme_file.read()
 
 __version__ = _namespace.get('__version__')
@@ -102,12 +96,15 @@ _SETUP_ARGS = {
         'Topic :: System :: Networking',
     ),
 
-    'packages'            : find_packages(exclude = ( 'tests', )),
+    'packages'            : setuptools.find_packages(exclude = ( 'tests', )),
     'include_package_data': True,
     'install_requires'    : INSTALL_REQUIRES,
+    'tests_require'       : (
+        'pyOpenSSL',
+    ),
     'test_suite'          : 'tests',
 }
 
 if __name__ == '__main__':
-    environ['COVERAGE_PROCESS_START'] = environ.get('COVERAGE_PROCESS_START', ospath_join(_MY_DIR, '.coveragerc'))
-    setup(**_SETUP_ARGS)
+    os.environ['COVERAGE_PROCESS_START'] = os.environ.get('COVERAGE_PROCESS_START', path.join(_MY_DIR, '.coveragerc'))
+    setuptools.setup(**_SETUP_ARGS)

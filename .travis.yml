@@ -1,4 +1,4 @@
-#-*-mode: yaml; encoding: utf-8-*-
+#-*- encoding: utf-8; mode: yaml -*-
 
 #=========================================================================
 # Copyright (c) 2015 Matt Bogosian <mtb19@columbia.edu>.
@@ -10,23 +10,52 @@
 # software in any capacity.
 #=========================================================================
 
-language:
-    - python
-
-python:
-    - 3.4
+language: python
+python: "3.4"
 
 install:
     - pip install coveralls tox
 
+# Grrr... <https://github.com/travis-ci/travis-ci/issues/1519> is closed
+# without a fix
 env:
-    - TOX_ENV=py27
-    - TOX_ENV=py33
-    - TOX_ENV=py34
-    - TOX_ENV=pypy
+    - TOX_ENV=py27 TWISTED='Twisted == 15.3'
+    - TOX_ENV=py27 TWISTED='Twisted == 15.4'
+    - TOX_ENV=py27 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
+
+    - TOX_ENV=py27 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED='Twisted == 15.3'
+    - TOX_ENV=py27 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED='Twisted == 15.4'
+    - TOX_ENV=py27 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
+
+    - TOX_ENV=pypy TWISTED='Twisted == 15.3'
+    - TOX_ENV=pypy TWISTED='Twisted == 15.4'
+    - TOX_ENV=pypy TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
+
+    - TOX_ENV=pypy OPENSSL=pyOpenSSL CRYPTOGRAPHY='cryptography < 1.0' TWISTED='Twisted == 15.3'
+    - TOX_ENV=pypy OPENSSL=pyOpenSSL CRYPTOGRAPHY='cryptography < 1.0' TWISTED='Twisted == 15.4'
+    - TOX_ENV=pypy OPENSSL=pyOpenSSL CRYPTOGRAPHY='cryptography < 1.0' TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
+
+matrix:
+    allow_failures:
+        - env: TOX_ENV=py33 TWISTED='Twisted == 15.3'
+        - env: TOX_ENV=py33 TWISTED='Twisted == 15.4'
+        - env: TOX_ENV=py33 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
+
+        - env: TOX_ENV=py33 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED='Twisted == 15.3'
+        - env: TOX_ENV=py33 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED='Twisted == 15.4'
+        - env: TOX_ENV=py33 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
+
+        - env: TOX_ENV=py34 TWISTED='Twisted == 15.3'
+        - env: TOX_ENV=py34 TWISTED='Twisted == 15.4'
+        - env: TOX_ENV=py34 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
+
+        - env: TOX_ENV=py34 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED='Twisted == 15.3'
+        - env: TOX_ENV=py34 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED='Twisted == 15.4'
+        - env: TOX_ENV=py34 OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
 
 script:
     - tox -e "${TOX_ENV}"
+    - ./runintegrations.sh
 
 after_success:
     - coveralls

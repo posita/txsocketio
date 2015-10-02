@@ -20,37 +20,35 @@
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,wildcard-import
-# pylint: disable=missing-super-argument
+from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
 #---- Imports ------------------------------------------------------------
 
-from os import environ
-from logging import (
-    CRITICAL,
-    basicConfig as logging_basicConfig,
-    getLevelName as logging_getLevelName,
-    getLogger,
-)
-from twisted.trial.unittest import TestCase
+import logging
+import os
+import unittest
+from twisted.internet import defer as t_defer
+
+import txsocketio
+from txsocketio.logging import SILENT
 
 #---- Constants ----------------------------------------------------------
 
 __all__ = ()
 
-_LOG_LVL = environ.get('_TXSOCKETIO_LOG_LVL')
-_LOG_LVL = CRITICAL + 1 if not _LOG_LVL else logging_getLevelName(_LOG_LVL)
-_LOG_FMT = environ.get('_TXSOCKETIO_LOG_FMT')
+_LOG_LVL = os.environ.get('_TXSOCKETIO_LOG_LVL')
+_LOG_LVL = SILENT if not _LOG_LVL else logging.getLevelName(_LOG_LVL)
+_LOG_FMT = os.environ.get('_TXSOCKETIO_LOG_FMT')
 
 #---- Initialization -----------------------------------------------------
 
 # Python 3.4 complains that assertRaisesRegexp is deprecated in favor of
 # assertRaisesRegex, which Python 2.7's unittest doesn't have; this
 # monkey patch fixes all that
-if not hasattr(TestCase, 'assertRaisesRegex'):
-    TestCase.assertRaisesRegex = TestCase.assertRaisesRegexp
+if not hasattr(unittest.TestCase, 'assertRaisesRegex'):
+    unittest.TestCase.assertRaisesRegex = unittest.TestCase.assertRaisesRegexp
 
-# Suppress logging messages during testing
-logging_basicConfig(format=_LOG_FMT)
-getLogger('txsocketio').setLevel(_LOG_LVL)
+t_defer.setDebugging(True)
+logging.basicConfig(format=_LOG_FMT)
+txsocketio.LOGGER.setLevel(_LOG_LVL)

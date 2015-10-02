@@ -1,14 +1,14 @@
 .. -*- encoding: utf-8; mode: rst -*-
-   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-   >>>>>>>>>>>>>>>> IMPORTANT: READ THIS BEFORE EDITING! <<<<<<<<<<<<<<<<
-   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-   Please keep each sentence on its own unwrapped line.
-   It looks like crap in a text editor, but it has no effect on rendering, and it allows much more useful diffs.
-   Thank you!
+    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    >>>>>>>>>>>>>>>> IMPORTANT: READ THIS BEFORE EDITING! <<<<<<<<<<<<<<<<
+    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Please keep each sentence on its own unwrapped line.
+    It looks like crap in a text editor, but it has no effect on rendering, and it allows much more useful diffs.
+    Thank you!
 
 .. toctree::
-   :maxdepth: 3
-   :hidden:
+    :maxdepth: 3
+    :hidden:
 
 Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
 
@@ -47,18 +47,18 @@ Installation can be performed via ``pip`` (which will download and install the `
 
 .. code-block:: sh
 
-  % pip install txsocketio
-  ...
+    % pip install txsocketio
+    ...
 
 Alternately, you can download the sources (e.g., `from GitHub <https://github.com/posita/txsocketio>`__) and run ``setup.py``:
 
 .. code-block:: sh
 
-  % git clone https://github.com/posita/txsocketio
-  ...
-  % cd txsocketio
-  % python setup.py install
-  ...
+    % git clone https://github.com/posita/txsocketio
+    ...
+    % cd txsocketio
+    % python setup.py install
+    ...
 
 Requirements
 ------------
@@ -67,24 +67,28 @@ The service you want to consume must use v1.x of the Socket.IO protocol. Earlier
 
 A modern version of Python is required:
 
-* `cPython <https://www.python.org/>`_ (2.7 or 3.3+)
+*   `cPython <https://www.python.org/>`_ (2.7 or 3.3+)
 
-* `PyPy <http://pypy.org/>`_ (Python 2.7 or 3.3+ compatible)
+*   `PyPy <http://pypy.org/>`_ (Python 2.7 or 3.3+ compatible)
 
 Python 2.6 will *not* work.
 
 ``txsocketio`` has the following dependencies (which will be installed automatically):
 
-* |autobahn|_
+*   |autobahn|_
 
-* |future|_
+*   |future|_
 
-* |twisted|_
+*   |mock|_ (for Python 2.7)
+
+*   |twisted|_
 
 .. |autobahn| replace:: ``autobahn``
 .. _`autobahn`: http://autobahn.ws/python/
 .. |future| replace:: ``future``
 .. _`future`: http://python-future.org/
+.. |mock| replace:: ``mock``
+.. _`mock`: https://github.com/testing-cabal/mock
 .. |twisted| replace:: ``twisted``
 .. _`twisted`: https://twistedmatrix.com/
 
@@ -96,7 +100,8 @@ TODO
 Similar Tools
 -------------
 
-If you want a Socket.IO client for Python, but don't (or can't) use Twisted, check out Roy Hyunjin Han's |socketIO-client|_.
+If you want a Socket.IO client for Python, but don't (or can't) use Twisted, check out Roy Hyunjin Han's |socketIO-client|_, which served as a very helpful source of information and guidance for understanding the various protocols and handshakes, and without which, this project may never have seen the light of day.
+(It is a longstanding gripe that Socket.IO's documentation is severely inadequate, and its source code is sometimes difficult to follow.)
 
 .. |socketIO-client| replace:: ``socketIO-client``
 .. _`socketIO-client`: https://github.com/invisibleroads/socketIO-client

@@ -43,6 +43,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
+    'repoze.sphinx.autointerface',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

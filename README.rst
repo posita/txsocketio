@@ -1,10 +1,10 @@
 .. -*- encoding: utf-8; mode: rst -*-
-   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-   >>>>>>>>>>>>>>>> IMPORTANT: READ THIS BEFORE EDITING! <<<<<<<<<<<<<<<<
-   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-   Please keep each sentence on its own unwrapped line.
-   It looks like crap in a text editor, but it has no effect on rendering, and it allows much more useful diffs.
-   Thank you!
+    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    >>>>>>>>>>>>>>>> IMPORTANT: READ THIS BEFORE EDITING! <<<<<<<<<<<<<<<<
+    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Please keep each sentence on its own unwrapped line.
+    It looks like crap in a text editor, but it has no effect on rendering, and it allows much more useful diffs.
+    Thank you!
 
 Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
 
@@ -23,12 +23,12 @@ If such a file did not accompany this software, then please contact the author b
 .. _`LICENSE.txt`: LICENSE
 
 .. image:: https://travis-ci.org/posita/txsocketio.svg?branch=master
-   :target: https://travis-ci.org/posita/txsocketio?branch=master
-   :alt: [Build Status]
+    :target: https://travis-ci.org/posita/txsocketio?branch=master
+    :alt: [Build Status]
 
 .. image:: https://coveralls.io/repos/posita/txsocketio/badge.svg?branch=master
-   :target: https://coveralls.io/r/posita/txsocketio?branch=master
-   :alt: [Coverage Status]
+    :target: https://coveralls.io/r/posita/txsocketio?branch=master
+    :alt: [Coverage Status]
 
 Curious about integrating your project with the above services?
 Jeff Knupp (|@jeffknupp|_) `describes how <https://www.jeffknupp.com/blog/2013/08/16/open-sourcing-a-python-project-the-right-way/>`__.
@@ -40,28 +40,28 @@ Jeff Knupp (|@jeffknupp|_) `describes how <https://www.jeffknupp.com/blog/2013/0
 =========================================
 
 .. image:: https://pypip.in/version/txsocketio/badge.svg
-   :target: https://pypi.python.org/pypi/txsocketio/
-   :alt: [Latest Version]
+    :target: https://pypi.python.org/pypi/txsocketio/
+    :alt: [Latest Version]
 
 .. image:: https://readthedocs.org/projects/txsocketio/badge/?version=master
-   :target: https://txsocketio.readthedocs.org/en/master/
-   :alt: [Documentation]
+    :target: https://txsocketio.readthedocs.org/en/master/
+    :alt: [Documentation]
 
 .. image:: https://pypip.in/license/txsocketio/badge.svg
-   :target: https://opensource.org/licenses/MIT
-   :alt: [License]
+    :target: https://opensource.org/licenses/MIT
+    :alt: [License]
 
 .. image:: https://pypip.in/py_versions/txsocketio/badge.svg
-   :target: https://pypi.python.org/pypi/txsocketio/master
-   :alt: [Supported Python Versions]
+    :target: https://pypi.python.org/pypi/txsocketio/master
+    :alt: [Supported Python Versions]
 
 .. image:: https://pypip.in/implementation/txsocketio/badge.svg
-   :target: https://pypi.python.org/pypi/txsocketio/master
-   :alt: [Supported Python Implementations]
+    :target: https://pypi.python.org/pypi/txsocketio/master
+    :alt: [Supported Python Implementations]
 
 .. image:: https://pypip.in/status/txsocketio/badge.svg
-   :target: https://pypi.python.org/pypi/txsocketio/master
-   :alt: [Development Stage]
+    :target: https://pypi.python.org/pypi/txsocketio/master
+    :alt: [Development Stage]
 
 ..
 
