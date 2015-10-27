@@ -93,7 +93,7 @@ class BaseUrl(t_urlpath.URLPath):
         to that location. If a port number is omitted in the network location,
         ``defaultport`` is used.
         """
-        m = _NETLOC_RE.search(bytes(netloc).decode('utf_8'))
+        m = _NETLOC_RE.search(netloc.decode('utf_8'))
 
         if not m:
             raise NetLocParseError('unable to parse netloc {!r}'.format(netloc))
@@ -122,7 +122,18 @@ class BaseUrl(t_urlpath.URLPath):
 
         :returns: the new :class:`BaseUrl`
         """
-        return cls.fromString(uri.toBytes())
+        return cls.fromBytes(uri.toBytes())
+
+    #---- Public hooks ---------------------------------------------------
+
+    @classmethod
+    def fromBytes(cls, url_bytes):
+        try:
+            super().fromBytes
+        except AttributeError:
+            return cls.fromString(url_bytes)
+
+        return cls.fromString(url_bytes.decode('ascii'))
 
     #---- Public methods -------------------------------------------------
 
@@ -133,21 +144,21 @@ class BaseUrl(t_urlpath.URLPath):
         .. code-block:: python
             :linenos:
 
-            >>> urlbytes = bytes(b'http://localhost/cgi-bin/test?key=val#name')
-            >>> url1 = BaseUrl.fromString(urlbytes)
+            >>> url_bytes = bytes(b'http://localhost/cgi-bin/test?key=val#name')
+            >>> url1 = BaseUrl.fromBytes(url_bytes)
             >>> url2 = url1.asscheme(bytes(b'https'), True)
-            >>> url1.scheme
-            b'http'
-            >>> url2.scheme
-            b'https'
-            >>> url2.query
-            b'key=val'
-            >>> url2.fragment
-            b'name'
-            >>> url2.unsplit()
+            >>> url1.scheme == b'http'
+            True
+            >>> url2.scheme == b'https'
+            True
+            >>> url2.query == b'key=val'
+            True
+            >>> url2.fragment == b'name'
+            True
+            >>> bytes(url2.unsplit())
             b'https://localhost/cgi-bin/test?key=val#name'
             >>> url3 = url1.asscheme(b'https', False)
-            >>> url3.unsplit()
+            >>> bytes(url3.unsplit())
             b'https://localhost/cgi-bin/test'
 
         :param bytes scheme: the new scheme
@@ -157,6 +168,13 @@ class BaseUrl(t_urlpath.URLPath):
 
         :returns: a new :class:`BaseUrl` with the new scheme
         """
+        try:
+            # This is to get around the faulty URLPath constructor that
+            # tries to call :meth:`future.types.newbytes.encode`
+            scheme = scheme.__native__()
+        except AttributeError:
+            pass
+
         if keepQuery:
             query = self.query
             fragment = self.fragment
@@ -206,12 +224,12 @@ class BaseUrl(t_urlpath.URLPath):
         .. code-block:: python
             :linenos:
 
-            >>> urlbytes = bytes(b'http://localhost/cgi-bin/test?key=val#name')
-            >>> url1 = BaseUrl.fromString(urlbytes)
+            >>> url_bytes = bytes(b'http://localhost/cgi-bin/test?key=val#name')
+            >>> url1 = BaseUrl.fromBytes(url_bytes)
             >>> url2 = url1.replace(query=b'getto=dachoppa', fragment=b'iamthelaw')
             >>> url1 is url2
             False
-            >>> url2.unsplit()
+            >>> bytes(url2.unsplit())
             b'http://localhost/cgi-bin/test?getto=dachoppa#iamthelaw'
 
         :param dict kw: the attributes to replace
@@ -238,16 +256,23 @@ class BaseUrl(t_urlpath.URLPath):
         .. code-block:: python
             :linenos:
 
-            >>> urlbytes = bytes(b'http://localhost/cgi-bin/test?key=val#name')
-            >>> url = BaseUrl.fromString(urlbytes)
+            >>> url_bytes = bytes(b'http://localhost/cgi-bin/test?key=val#name')
+            >>> url = BaseUrl.fromBytes(url_bytes)
             >>> url.scheme = b'https'
             >>> url.query = b'utf8=%E2%9C%93'
-            >>> url.unsplit()
+            >>> bytes(url.unsplit())
             b'https://localhost/cgi-bin/test?utf8=%E2%9C%93#name'
 
         :returns: the reformed URL
         """
-        return self.__str__()
+        val = self.replace().__str__()
+
+        try:
+            val = val.encode('ascii')
+        except AttributeError:
+            pass
+
+        return val
 
     #---- Private hooks --------------------------------------------------
 
