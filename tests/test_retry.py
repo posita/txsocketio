@@ -36,6 +36,7 @@ from txsocketio.retry import (
     RetryingCaller,
     calltimeout,
 )
+import tests # pylint: disable=unused-import
 
 #---- Constants ----------------------------------------------------------
 
@@ -58,7 +59,7 @@ class CallTimeoutTestCase(t_unittest.TestCase):
     def tearDown(self):
         super().tearDown()
 
-    def test_calltimeout(self):
+    def test_call_timeout(self):
         clock = t_task.Clock()
 
         def _nondeferredcall(_val):
@@ -208,7 +209,7 @@ class RetryingCallerTestCase(t_unittest.TestCase):
         self.assertEqual(call4.times_called, 1)
         self.assertEqual(call4.failures_left, retries - 1)
 
-    def test_firsterror(self):
+    def test_first_error(self):
         err_msg = 'Weee!'
 
         def _none(*_, **__): # pylint: disable=unused-argument

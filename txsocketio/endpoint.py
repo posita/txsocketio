@@ -28,19 +28,11 @@ from future.builtins.disabled import * # pylint: disable=redefined-builtin,unuse
 import functools
 import posixpath
 import re
-
-try:
-    from urllib import parse # pylint: disable=no-name-in-module,useless-suppression
-except ImportError:
-    import urllib as parse
-
 from twisted.internet import endpoints as t_endpoints
 
-# TODO: remove this (and bump the Twisted version in setup.py) once
-# <https://twistedmatrix.com/trac/ticket/5642> is fixed
 try:
     if not hasattr(t_endpoints, 'TLSWrapperClientEndpoint'):
-        # Monkey patch time!
+        # Monkey patch until <https://tm.tl/5642> is fixed
         from txsocketio.tls import TLSWrapClientEndpoint
         t_endpoints.TLSWrapperClientEndpoint = TLSWrapClientEndpoint
         del TLSWrapClientEndpoint
@@ -54,6 +46,8 @@ from twisted.web import (
     iweb as t_iweb,
 )
 from zope import interface # pylint: disable=import-error
+
+from .symmetries import parse
 
 #---- Constants ----------------------------------------------------------
 
@@ -106,8 +100,18 @@ class BaseUrl(t_urlpath.URLPath):
         for host, port in zip(*zip_args):
             if host is not None:
                 port = int(port) if port else defaultport
+                host_quoted = parse.quote(host, safe=b':')
 
-                return str(parse.quote(host, safe=b':')).encode('utf_8'), port
+                # This works properly in Python 2 because str maps to
+                # :class:`future.types.newstr` (it *may* also work in
+                # Python 2 with the native `str` type, but that's only
+                # because Python 2 perversely allows one to call `encode`
+                # on a byte string; but the results would be
+                # unpredictable if the URL was already encoded)
+                if isinstance(host_quoted, str):
+                    host_quoted = host_quoted.encode('utf_8')
+
+                return host_quoted, port
 
     #---- Public class methods -------------------------------------------
 

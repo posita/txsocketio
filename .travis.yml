@@ -16,58 +16,45 @@ python: "3.4"
 install:
     - pip install coveralls tox
 
-# Grrr... <https://github.com/travis-ci/travis-ci/issues/1519> is closed
+# Grrr; <https://github.com/travis-ci/travis-ci/issues/1519> is closed
 # without a fix
 env:
-    - TOX_ENV=py27 TWISTED='Twisted == 15.3'
-    - TOX_ENV=py27 TWISTED='Twisted == 15.3' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-    - TOX_ENV=py27 TWISTED='Twisted == 15.4'
-    - TOX_ENV=py27 TWISTED='Twisted == 15.4' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-    - TOX_ENV=py27 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-    - TOX_ENV=py27 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
+    - TOX_ENV=py27-twisted_15_3-ssl_no
+    - TOX_ENV=py27-twisted_15_3-ssl_yes
+    - TOX_ENV=py27-twisted_15_3-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
+    - TOX_ENV=py27-twisted_15_4-ssl_no
+    - TOX_ENV=py27-twisted_15_4-ssl_yes
+    - TOX_ENV=py27-twisted_15_4-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
+    - TOX_ENV=py27-twisted_trunk-ssl_no
+    - TOX_ENV=py27-twisted_trunk-ssl_yes
 
-    - TOX_ENV=pypy TWISTED='Twisted == 15.3'
-    - TOX_ENV=pypy TWISTED='Twisted == 15.3' OPENSSL=pyOpenSSL CRYPTOGRAPHY='cryptography < 1.0'
-    - TOX_ENV=pypy TWISTED='Twisted == 15.4'
-    - TOX_ENV=pypy TWISTED='Twisted == 15.4' OPENSSL=pyOpenSSL CRYPTOGRAPHY='cryptography < 1.0'
-    - TOX_ENV=pypy TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-    - TOX_ENV=pypy TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY='cryptography < 1.0'
+    - TOX_ENV=pypy-twisted_15_3-ssl_no
+    - TOX_ENV=pypy-twisted_15_3-ssl_yes
+    - TOX_ENV=pypy-twisted_15_4-ssl_no
+    - TOX_ENV=pypy-twisted_15_4-ssl_yes
+    - TOX_ENV=pypy-twisted_trunk-ssl_no
+    - TOX_ENV=pypy-twisted_trunk-ssl_yes
 
-    - TOX_ENV=py33 TWISTED='Twisted == 15.3'
-    - TOX_ENV=py33 TWISTED='Twisted == 15.3' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-    - TOX_ENV=py33 TWISTED='Twisted == 15.4'
-    - TOX_ENV=py33 TWISTED='Twisted == 15.4' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-    - TOX_ENV=py33 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-    - TOX_ENV=py33 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
+    - TOX_ENV=py33-twisted_trunk-ssl_no
+    - TOX_ENV=py33-twisted_trunk-ssl_yes
 
-    - TOX_ENV=py34 TWISTED='Twisted == 15.3'
-    - TOX_ENV=py34 TWISTED='Twisted == 15.3' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-    - TOX_ENV=py34 TWISTED='Twisted == 15.4'
-    - TOX_ENV=py34 TWISTED='Twisted == 15.4' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-    - TOX_ENV=py34 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-    - TOX_ENV=py34 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
+    - TOX_ENV=py34-twisted_trunk-ssl_no
+    - TOX_ENV=py34-twisted_trunk-ssl_yes
 
 matrix:
     allow_failures:
-        - env: TOX_ENV=py27 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-        - env: TOX_ENV=py27 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
+        - env: TOX_ENV=py27-twisted_15_3-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
+        - env: TOX_ENV=py27-twisted_15_4-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
 
-        - env: TOX_ENV=pypy TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-        - env: TOX_ENV=pypy TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY='cryptography < 1.0'
-
-        - env: TOX_ENV=py33 TWISTED='Twisted == 15.3'
-        - env: TOX_ENV=py33 TWISTED='Twisted == 15.3' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-        - env: TOX_ENV=py33 TWISTED='Twisted == 15.4'
-        - env: TOX_ENV=py33 TWISTED='Twisted == 15.4' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-        - env: TOX_ENV=py33 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-        - env: TOX_ENV=py33 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-
-        - env: TOX_ENV=py34 TWISTED='Twisted == 15.3'
-        - env: TOX_ENV=py34 TWISTED='Twisted == 15.3' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-        - env: TOX_ENV=py34 TWISTED='Twisted == 15.4'
-        - env: TOX_ENV=py34 TWISTED='Twisted == 15.4' OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
-        - env: TOX_ENV=py34 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk
-        - env: TOX_ENV=py34 TWISTED=svn+svn://svn.twistedmatrix.com/svn/Twisted/trunk OPENSSL=pyOpenSSL CRYPTOGRAPHY=cryptography
+        # Twisted trunk is experimental
+        - env: TOX_ENV=py27-twisted_trunk-ssl_no
+        - env: TOX_ENV=py27-twisted_trunk-ssl_yes
+        - env: TOX_ENV=pypy-twisted_trunk-ssl_no
+        - env: TOX_ENV=pypy-twisted_trunk-ssl_yes
+        - env: TOX_ENV=py33-twisted_trunk-ssl_no
+        - env: TOX_ENV=py33-twisted_trunk-ssl_yes
+        - env: TOX_ENV=py34-twisted_trunk-ssl_no
+        - env: TOX_ENV=py34-twisted_trunk-ssl_yes
 
 script:
     - tox -e "${TOX_ENV}"

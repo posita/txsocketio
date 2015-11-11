@@ -14,8 +14,10 @@
 __pycache__
 _trial_temp
 .coverage
+.hypothesis
 .tox
 .vagrant
+.venv
 .venv-*
 .virtualenv
 *_flymake.py

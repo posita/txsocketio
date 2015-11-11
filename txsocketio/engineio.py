@@ -30,26 +30,16 @@ from future.utils import iteritems
 #---- Imports ------------------------------------------------------------
 
 import collections
+import decimal
 import functools
-
-try:
-    from http import cookiejar
-except ImportError:
-    import cookielib as cookiejar # pylint: disable=import-error,useless-suppression
-
 import io
-import json
 import logging
-import pprint
+# import pprint
 import time
-
-try:
-    from urllib import parse # pylint: disable=no-name-in-module,useless-suppression
-except ImportError:
-    import urllib as parse
-
+import simplejson
 from twisted.internet import (
     defer as t_defer,
+    error as t_error,
     task as t_task,
 )
 from twisted.python import urlpath as t_urlpath
@@ -65,37 +55,62 @@ from .endpoint import (
     ClientEndpointFactory,
 )
 from .logging import logerrback
+# from .retry import deferredtimeout
+from .symmetries import (
+    cookiejar,
+    parse,
+)
 
 #---- Constants ----------------------------------------------------------
 
 __all__ = (
+    'EIO_TYPE_CLOSE',
+    'EIO_TYPE_CODES_BY_NAME',
+    'EIO_TYPE_MESSAGE',
+    'EIO_TYPE_NAMES_BY_CODE',
+    'EIO_TYPE_NOOP',
+    'EIO_TYPE_OPEN',
+    'EIO_TYPE_PING',
+    'EIO_TYPE_PONG',
+    'EIO_TYPE_UPGRADE',
     'EngineIo',
+    'EngineIoException',
+    'EngineIoServerError',
+    'MethodMismatchError',
+    'PayloadDecodeError',
+    'PayloadEncodeError',
+    'ReceivedClosePacket',
+    'TransportMismatchError',
+    'TransportStateError',
+    'UnexpectedServerError',
+    'UnknownSessionIdError',
+    'UnrecognizedTransportError',
 )
 
-ENGINEIO_PROTOCOL = 3
+EIO_PROTOCOL = 3
 
 TRANSPORT_POLLING = 'polling'
 TRANSPORT_WEBSOCKETS = 'websocket'
 
-PACKET_TYPE_OPEN    = bytes(b'0')
-PACKET_TYPE_CLOSE   = bytes(b'1')
-PACKET_TYPE_PING    = bytes(b'2')
-PACKET_TYPE_PONG    = bytes(b'3')
-PACKET_TYPE_MESSAGE = bytes(b'4')
-PACKET_TYPE_UPGRADE = bytes(b'5')
-PACKET_TYPE_NOOP    = bytes(b'6')
+EIO_TYPE_OPEN    = bytes(b'0')
+EIO_TYPE_CLOSE   = bytes(b'1')
+EIO_TYPE_PING    = bytes(b'2')
+EIO_TYPE_PONG    = bytes(b'3')
+EIO_TYPE_MESSAGE = bytes(b'4')
+EIO_TYPE_UPGRADE = bytes(b'5')
+EIO_TYPE_NOOP    = bytes(b'6')
 
-PACKET_TYPE_NAMES_BY_CODE = {
-    PACKET_TYPE_OPEN:    'open',
-    PACKET_TYPE_CLOSE:   'close',
-    PACKET_TYPE_PING:    'ping',
-    PACKET_TYPE_PONG:    'pong',
-    PACKET_TYPE_MESSAGE: 'message',
-    PACKET_TYPE_UPGRADE: 'upgrade',
-    PACKET_TYPE_NOOP:    'noop',
+EIO_TYPE_NAMES_BY_CODE = {
+    EIO_TYPE_OPEN:    'open',
+    EIO_TYPE_CLOSE:   'close',
+    EIO_TYPE_PING:    'ping',
+    EIO_TYPE_PONG:    'pong',
+    EIO_TYPE_MESSAGE: 'message',
+    EIO_TYPE_UPGRADE: 'upgrade',
+    EIO_TYPE_NOOP:    'noop',
 }
 
-PACKET_TYPE_CODES_BY_NAME = dict(( ( v, k ) for k, v in iteritems(PACKET_TYPE_NAMES_BY_CODE) ))
+EIO_TYPE_CODES_BY_NAME = dict(( ( v, k ) for k, v in iteritems(EIO_TYPE_NAMES_BY_CODE) ))
 
 TRANSPORT_STATE_CONNECTED = 'connected'
 TRANSPORT_STATE_CONNECTING = 'connecting'
@@ -272,7 +287,7 @@ class ITransport(interface.Interface):
         Sends an Engine.IO packet using the implementing transport.
 
         :param bytes packet_type: the Engine.IO packet type (one of
-            the values from :const:`PACKET_TYPE_CODES_BY_NAME`)
+            the values from :const:`EIO_TYPE_CODES_BY_NAME`)
 
         :param packet_data: the packet data
 
@@ -531,7 +546,7 @@ class PollingTransport(_BaseTransport):
         super().__init__()
 
         self._query = {
-            b'EIO': ENGINEIO_PROTOCOL,
+            b'EIO': EIO_PROTOCOL,
             b'transport': TRANSPORT_POLLING.encode('ascii'),
         }
 
@@ -550,11 +565,16 @@ class PollingTransport(_BaseTransport):
         # We need at least two persistent connections (one for polling for
         # packets and one for sending them)
         self._pool.maxPersistentPerHost = max(self._pool.maxPersistentPerHost, 2)
+        # Leave one connection for polling
+        self._send_queue = PollingTransport._SendQueue(backlog=self._pool.maxPersistentPerHost - 1)
+        self._sending_ds = collections.deque()
         self._agent = agent if agent is not None else self._builddefaultagent()
         self._connecting_d = None
         self._disconnecting_d = None
         self._receiving_d = None
-        self._packetsloop() # initializes self._receiving_d
+        # Because we're still disconnected at this point, this initializes
+        # self._receiving_d without starting the loop
+        self._receiveloop()
 
     #---- Public hooks ---------------------------------------------------
 
@@ -562,41 +582,41 @@ class PollingTransport(_BaseTransport):
         super().connect(transport_context)
         self.state = TRANSPORT_STATE_CONNECTING
 
+        def _startsendworkerloops():
+            for _ in range(self._send_queue.backlog):
+                self._sendworkerloop()
+
         if self.transport_context.session_id is not None:
             # Assume that we're "upgrading" our own transport and that a
             # session has already been established; also assume that the
             # session is still good
             self.state = TRANSPORT_STATE_RECEIVING
             d = t_defer.succeed(None)
-            self._packetsloop()
+            _startsendworkerloops()
+            self._receiveloop()
 
             return d
 
-        self._connecting_d = self._packetsrequest()
+        d = self._connecting_d = self._packetsrequest()
 
         def _done(_passthru):
             self._connecting_d = None
 
             return _passthru
 
-        self._connecting_d.addBoth(_done)
+        d.addBoth(_done)
 
         def _connected(_passthru):
-            if self.state == TRANSPORT_STATE_CONNECTING:
-                self.state = TRANSPORT_STATE_CONNECTED
-            else:
-                # We get here if the connection was successful, but was
-                # disconnected (e.g., via :meth:`~ITransport.disconnect`)
-                # between then and when we reach this
-                _LOGGER.warning('connect completed successfully, but state is %r', self.state)
+            self.state = TRANSPORT_STATE_CONNECTED
+            _startsendworkerloops()
 
             return _passthru
 
-        self._connecting_d.addCallback(_connected)
-        self._connecting_d.addErrback(self._shutitdown, lose_connection=True)
-        self._connecting_d.addErrback(logerrback, logger=_LOGGER, msg='Failure while connecting:')
+        d.addCallback(_connected)
+        d.addErrback(self._shutitdown, lose_connection=True)
+        d.addErrback(logerrback, logger=_LOGGER, msg='Failure while connecting:')
 
-        return self._connecting_d
+        return d
 
     def disconnect(self):
         super().disconnect()
@@ -605,14 +625,17 @@ class PollingTransport(_BaseTransport):
 
         return d
 
-    def sendpacket(self, packet_type, packet_data):
+    def sendpacket(self, packet_type, packet_data=''):
         super().sendpacket(packet_type, packet_data)
-        d = self._sendpacket(packet_type, packet_data)
-        d.addErrback(logerrback, logger=_LOGGER, msg='Failure raised when sending packet <{}:{!r}>:'.format(PACKET_TYPE_NAMES_BY_CODE.get(packet_type, '<WTF?! UNKNOWN PACKET TYPE?!>'), packet_data))
-        d.addErrback(self._stopconnecting)
-        d.addErrback(self._shutitdown, lose_connection=True)
-
-        return d
+        # TODO: BEGIN remove
+        # d = self._sendpacket(packet_type, packet_data)
+        # d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(packet_type, '<WTF?! UNKNOWN PACKET TYPE?!>'), packet_data))
+        # d.addErrback(self._stopconnecting)
+        # d.addErrback(self._shutitdown, lose_connection=True)
+        #
+        # return d
+        # TODO: END remove
+        return self._send_queue.putpacket(packet_type, packet_data)
 
     def standby(self):
         super().standby()
@@ -621,11 +644,23 @@ class PollingTransport(_BaseTransport):
 
         return d
 
+    #---- Private inner classes ------------------------------------------
+
+    class _SendQueue(t_defer.DeferredQueue):
+
+        #---- Public methods ---------------------------------------------
+
+        def putpacket(self, packet_type, packet_data):
+            callback_d = t_defer.Deferred()
+            self.put(( callback_d, packet_type, packet_data ))
+
+            return callback_d
+
     #---- Private methods ------------------------------------------------
 
     def _builddefaultagent(self):
-        endpointfactory = ClientEndpointFactory(self._reactor)
-        agent = t_client.Agent.usingEndpointFactory(self._reactor, endpointfactory, pool=self._pool)
+        endpoint_factory = ClientEndpointFactory(self._reactor)
+        agent = t_client.Agent.usingEndpointFactory(self._reactor, endpoint_factory, pool=self._pool)
         jar = cookiejar.CookieJar()
         agent = t_client.CookieAgent(agent, jar)
         agent = t_client.ContentDecoderAgent(agent, [ ( b'gzip', t_client.GzipDecoder ) ])
@@ -633,7 +668,7 @@ class PollingTransport(_BaseTransport):
         return agent
 
     def _builddefaultpool(self):
-        pool = t_client.HTTPConnectionPool(self._reactor)
+        pool = t_client.HTTPConnectionPool(self._reactor) #, persistent=False)
         pool.retryAutomatically = True
 
         return pool
@@ -668,7 +703,7 @@ class PollingTransport(_BaseTransport):
             if content_type == 'application/json':
                 try:
                     body = response_with_body.body.decode(response_with_body.body_charset)
-                    body_json = json.loads(body)
+                    body_json = jsonloads(body)
                 except ( UnicodeDecodeError, ValueError ):
                     pass
 
@@ -693,33 +728,24 @@ class PollingTransport(_BaseTransport):
 
         return request_count, url_bytes
 
-    def _packetsloop(self, _=None):
-        if self.state != TRANSPORT_STATE_RECEIVING:
-            # Suppress any :exc:`twisted.internet.defer.CancelledError` in
-            # case we try to cancel it outside the loop
-            self._receiving_d = t_defer.succeed(None)
-
-            return
-
-        self._receiving_d = self._packetsrequest()
-        self._receiving_d.addCallback(self._packetsloop)
-        self._receiving_d.addErrback(self._stopconnecting)
-        self._receiving_d.addErrback(self._shutitdown, lose_connection=True, stop_packets_loop=False)
-        handled = ( t_defer.CancelledError, ReceivedClosePacket, UnknownSessionIdError )
-        self._receiving_d.addErrback(logerrback, logger=_LOGGER, msg='Failure raised when retrieving packets:', handled=handled)
-
     def _packetsrequest(self):
         if self.state in ( TRANSPORT_STATE_DISCONNECTED, TRANSPORT_STATE_DISCONNECTING ):
             raise TransportStateError('packets requested when {} state is {!r}'.format(self.__class__.__name__, self.state))
 
-        d = t_task.deferLater(self._reactor, 0, self._sessionrequest)
+        d = self._sessionrequest()
+
+        # TODO: why doesn't this work?
+        # if self._transport_context is not None \
+        #         and self._transport_context.ping_timeout is not None:
+        #     d = deferredtimeout(self._reactor, self._transport_context.ping_timeout / 1000, d)
+
         d.addCallback(self._parsepackets)
 
         return d
 
     def _parsepackets(self, response_with_body):
         try:
-            packets = [ decpacket(pckt) for pckt in decbinpayloadsgen(response_with_body.body) ]
+            packets = [ deceiopacket(pckt) for pckt in decbinpayloadsgen(response_with_body.body) ]
         except PayloadDecodeError as exc:
             new_exc = type(exc)('unparseable response from request[{}]: {!r}'.format(response_with_body.request_count, response_with_body.body), wrapped_exc=exc)
 
@@ -729,10 +755,10 @@ class PollingTransport(_BaseTransport):
 
         for i, packet in enumerate(packets):
             packet_type, packet_data = packet
-            packet_name = PACKET_TYPE_NAMES_BY_CODE[packet_type]
+            packet_name = EIO_TYPE_NAMES_BY_CODE[packet_type]
             _LOGGER.debug('received packet[%d] ("%s") from request[%d]', i, packet_name, response_with_body.request_count)
 
-            if packet_type == PACKET_TYPE_OPEN \
+            if packet_type == EIO_TYPE_OPEN \
                     and (i > 0
                         or response_with_body.request_count != 0):
                 raise TransportStateError('received out-of-band "{}" packet'.format(packet_name))
@@ -740,8 +766,8 @@ class PollingTransport(_BaseTransport):
             if closing:
                 raise TransportStateError('received out-of-band "{}" packet after close'.format(packet_name))
 
-            if packet_type == PACKET_TYPE_OPEN:
-                data = json.loads(packet_data)
+            if packet_type == EIO_TYPE_OPEN:
+                data = jsonloads(packet_data)
                 ping_interval = data['pingInterval']
                 ping_timeout = data['pingTimeout']
                 session_id = data['sid']
@@ -750,27 +776,42 @@ class PollingTransport(_BaseTransport):
                 self._query['sid'] = session_id
                 _LOGGER.debug('session "%s" opened', session_id)
 
-            emit_args = [ packet_name ]
+            dispatch_args = [ packet_name ]
 
-            if packet_type in ( PACKET_TYPE_MESSAGE, PACKET_TYPE_PING, PACKET_TYPE_PONG ):
-                emit_args.append(packet_data)
+            if packet_type in ( EIO_TYPE_MESSAGE, EIO_TYPE_PING, EIO_TYPE_PONG ):
+                dispatch_args.append(packet_data)
 
-            if packet_type == PACKET_TYPE_CLOSE:
+            if packet_type == EIO_TYPE_CLOSE:
                 closing = True
                 _LOGGER.debug('session "%s" closed by server', self.transport_context.session_id)
             else:
-                self.emit(*emit_args)
+                self.dispatch(*dispatch_args)
 
         if closing:
             self.transport_context.clear()
 
             raise ReceivedClosePacket
 
-    def _sendpacket(self, packet_type, packet_data=''):
-        packet = encpacket(packet_type, packet_data)
-        payload = encbinpayload(packet)
+    def _receiveloop(self, _=None):
+        if self.state != TRANSPORT_STATE_RECEIVING:
+            # Suppress any :exc:`twisted.internet.defer.CancelledError` in
+            # case we try to cancel it outside the loop
+            self._receiving_d = t_defer.succeed(None)
+            _LOGGER.debug('receive loop halting')
 
-        d = t_task.deferLater(self._reactor, 0, self._sessionrequest, payload)
+            return
+
+        self._receiving_d = self._packetsrequest()
+        self._receiving_d.addCallback(self._receiveloop)
+        self._receiving_d.addErrback(self._stopconnecting)
+        self._receiving_d.addErrback(self._shutitdown, lose_connection=True, stop_packets_loop=False)
+        handled = ( t_defer.CancelledError, t_client.ResponseFailed, ReceivedClosePacket, UnknownSessionIdError )
+        self._receiving_d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when retrieving packets:', handled=handled)
+
+    def _sendpacket(self, packet_type, packet_data=''):
+        packet = enceiopacket(packet_type, packet_data)
+        payload = encbinpayload(packet)
+        d = self._sessionrequest(payload)
 
         def _checkbody(_request_with_body):
             if _request_with_body.body != 'ok':
@@ -780,6 +821,36 @@ class PollingTransport(_BaseTransport):
 
         return d
 
+    def _sendworkerloop(self, _=None):
+        if self.state not in ( TRANSPORT_STATE_CONNECTED, TRANSPORT_STATE_RECEIVING ):
+            _LOGGER.debug('send worker loop halting')
+
+            return
+
+        d = self._send_queue.get()
+        self._sending_ds.append(d)
+
+        def _sendpacket(_queue_item):
+            _callback_d, _packet_type, _packet_data = _queue_item
+            _d = self._sendpacket(_packet_type, _packet_data)
+
+            def __done(__passthru):
+                self._sending_ds.remove(d)
+
+                return __passthru
+
+            _d.addBoth(__done)
+            _d.addErrback(self._stopconnecting)
+            _d.addErrback(self._shutitdown, lose_connection=True)
+            _d.chainDeferred(_callback_d)
+            # handled = ( t_defer.CancelledError, t_client.ResponseFailed, UnknownSessionIdError )
+            # _d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(_packet_type, '[WTF?! UNKNOWN PACKET TYPE?!]'), _packet_data), handled=handled)
+
+            return _d
+
+        d.addCallback(_sendpacket)
+        d.addCallback(self._sendworkerloop)
+
     def _sessionrequest(self, payload=None, method=None):
         request_count, url_bytes = self._nextrequesturl()
         headers = t_http_headers.Headers(self._headers)
@@ -787,20 +858,20 @@ class PollingTransport(_BaseTransport):
         if payload is None:
             method = method if method is not None else b'GET'
             body_producer = None
-            _LOGGER.debug('%s-ing from <%s>', method, url_bytes.decode('utf_8'))
+            _LOGGER.debug('%s-ing[%d] from <%s>', method, request_count, url_bytes.decode('utf_8'))
         else:
             method = method if method is not None else b'POST'
             headers.addRawHeader(b'Content-Type', b'application/octet-stream')
             body_producer = t_client.FileBodyProducer(io.BytesIO(payload))
-            _LOGGER.debug('%s-ing %r to <%s>', method, payload, url_bytes.decode('utf_8'))
+            _LOGGER.debug('%s-ing[%d] %r to <%s>', method, request_count, payload, url_bytes.decode('utf_8'))
 
-        d = self._agent.request(method, url_bytes, headers, body_producer) # TODO: timeout?
+        d = self._agent.request(method, url_bytes, headers, body_producer)
 
         def _responsereceived(_response, _request_count):
             _response.request_count = _request_count
             _LOGGER.debug('response code from request[%d]: %d %s', _request_count, _response.code, _response.phrase.decode('utf_8'))
-            _LOGGER.debug('response headers from request[%d]:', _request_count)
-            _LOGGER.debug(pprint.pformat(list(_response.headers.getAllRawHeaders())))
+            # _LOGGER.debug('response headers from request[%d]:', _request_count)
+            # _LOGGER.debug(pprint.pformat(list(_response.headers.getAllRawHeaders())))
 
             _d = t_client.readBody(_response)
 
@@ -823,15 +894,18 @@ class PollingTransport(_BaseTransport):
             self.state = TRANSPORT_STATE_DISCONNECTING
         except TransportStateError:
             # Someone else is working on this, so we're done
+
             return passthru
 
         def _trysendclose(_passthru):
             if self.transport_context.session_id is None:
                 return t_defer.execute(lambda: _passthru)
 
-            _d = self._sendpacket(PACKET_TYPE_CLOSE)
+            # This may grab a non-cached connection outside of our pool if
+            # all cached connections are in use
+            _d = self._sendpacket(EIO_TYPE_CLOSE)
             handled = ( UnknownSessionIdError, )
-            _d.addErrback(logerrback, logger=_LOGGER, msg='Failure in sending close packet:', handled=handled)
+            _d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending close packet:', handled=handled)
             _d.addBoth(lambda _: _passthru)
 
             return _d
@@ -841,23 +915,30 @@ class PollingTransport(_BaseTransport):
         else:
             d = t_defer.execute(lambda: passthru)
 
-        # TODO: what about sending packets?
+        def _stopsendworkerloops(_passthru):
+            _dl = t_defer.DeferredList(self._sending_ds, consumeErrors=True)
+            _dl.cancel()
+            _dl.addBoth(lambda _: _passthru)
 
-        def _stoppacketsloop(_passthru):
+            return _dl
+
+        d.addBoth(_stopsendworkerloops)
+
+        def _stopreceiveloop(_passthru):
             self._receiving_d.cancel()
             self._receiving_d.addBoth(lambda _: _passthru)
 
             return self._receiving_d
 
         if stop_packets_loop:
-            d.addBoth(_stoppacketsloop)
+            d.addBoth(_stopreceiveloop)
 
         def _stoppool(_passthru):
-            d = self._pool.closeCachedConnections()
-            d.addErrback(logerrback, logger=_LOGGER, msg='Failure in shutting down pool:')
-            d.addBoth(lambda _: _passthru)
+            _d = self._pool.closeCachedConnections()
+            _d.addErrback(logerrback, logger=_LOGGER, msg='Failure in shutting down pool:')
+            _d.addBoth(lambda _: _passthru)
 
-            return d
+            return _d
 
         d.addBoth(_stoppool)
 
@@ -868,7 +949,7 @@ class PollingTransport(_BaseTransport):
             self.state = TRANSPORT_STATE_DISCONNECTED
 
             if lose_connection:
-                self.emit(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_CLOSE])
+                self.dispatch(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE])
 
             return _passthru
 
@@ -879,6 +960,7 @@ class PollingTransport(_BaseTransport):
     def _stopconnecting(self, passthru):
         def _stopconnectingimpl():
             if self._connecting_d is not None:
+                _LOGGER.debug('_stopconnectingimpl canceling self._connecting_d')
                 self._connecting_d.cancel()
 
             f = lambda: self._connecting_d
@@ -886,8 +968,8 @@ class PollingTransport(_BaseTransport):
             return t_defer.maybeDeferred(f)
 
         d = _stopconnectingimpl()
-        handled = ( t_defer.CancelledError, )
-        d.addErrback(logerrback, logger=_LOGGER, msg='Failure in canceling pending connection:', handled=handled)
+        handled = ( t_defer.CancelledError, t_error.ConnectingCancelledError )
+        d.addErrback(logerrback, logger=_LOGGER, msg='Failure raised when canceling pending connection:', handled=handled, suppress_msg_on_handled=False)
         d.addBoth(lambda _: passthru)
 
         return d
@@ -896,8 +978,8 @@ class PollingTransport(_BaseTransport):
 class EngineIo(Dispatcher):
     """
     Abstracts an Engine.IO connection, handling any underlying transport
-    upgrades, and emitting received packets as events with ``event`` set
-    to one of one of the keys from :const:`PACKET_TYPE_CODES_BY_NAME`.
+    upgrades, and dispatching received packets as events with ``event``
+    set to one of one of the keys from :const:`EIO_TYPE_CODES_BY_NAME`.
 
     ``base_url`` is usually in the form of one of:
 
@@ -976,7 +1058,7 @@ class EngineIo(Dispatcher):
 
     #---- Public methods -------------------------------------------------
 
-    def sendpacket(self, packet_type, packet_data=''):
+    def sendeiopacket(self, packet_type, packet_data=''):
         """
         Sends an Engine.IO packet using the underlying :class:`ITransport`
         provider with the same semantics as with
@@ -1007,7 +1089,7 @@ class EngineIo(Dispatcher):
         def _startconnected(_):
             _d = self._transport.standby()
 
-            def __standingby(__): # pylint: disable=unused-argument
+            def __upgradetransport(__): # pylint: disable=unused-argument
                 self._unregisterstarttransport(self._transport)
                 upgrades = [ t for t in self._transport_context.upgrades if t in self._transport_factories ]
 
@@ -1019,14 +1101,14 @@ class EngineIo(Dispatcher):
 
                 return self._transport.connect(self._transport_context)
 
-            _d.addCallback(__standingby)
+            _d.addCallback(__upgradetransport)
 
             return _d
 
         d.addCallback(_startconnected)
 
         def _cleanup(_passthru):
-            self._emitqueuedevents()
+            self._dispatchqueuedevents()
 
             return _passthru
 
@@ -1049,10 +1131,14 @@ class EngineIo(Dispatcher):
 
     #---- Private methods ------------------------------------------------
 
-    def _emitqueuedevents(self):
+    def _dispatchqueuedevents(self):
         while self._tmp_event_queue:
             event, args, kw = self._tmp_event_queue.popleft()
-            self.emit(event, *args, **kw)
+            if self._transport is not None:
+                _LOGGER.debug('dispatching queued %s event to transport', event)
+                self._transport.dispatch(event, *args, **kw)
+            else:
+                _LOGGER.debug('dropping queued %s event', event)
 
     @t_defer.inlineCallbacks
     def _handleclose(self, event):
@@ -1071,7 +1157,7 @@ class EngineIo(Dispatcher):
         else:
             _LOGGER.debug('ping loop completed')
 
-        self.emit(event)
+        self.dispatch(event)
 
     def _handleclosestart(self, event):
         _LOGGER.debug('received %s event from transport', event)
@@ -1082,74 +1168,90 @@ class EngineIo(Dispatcher):
     def _handleopen(self, event):
         _LOGGER.debug('received %s event from transport', event)
         self._pingloop()
-        self.emit(event)
+        self.dispatch(event)
 
     def _handleping(self, event, payload):
         _LOGGER.debug('received %s => %r event from transport', event, payload)
-        self.sendpacket(PACKET_TYPE_PONG, payload)
-        self.emit(event, payload)
+        self.sendeiopacket(EIO_TYPE_PONG, '')
+        self.dispatch(event, payload)
 
     def _onerror(self, event, exception):
         _LOGGER.debug('received %s event from transport', event)
         _LOGGER.debug(exception)
-        self.emit(event, exception)
+        self.dispatch(event, exception)
 
     def _onnopayload(self, event):
         _LOGGER.debug('received %s event from transport', event)
-        self.emit(event)
+        self.dispatch(event)
 
     def _onpayload(self, event, payload):
         _LOGGER.debug('received %s => %r event from transport', event, payload)
-        self.emit(event, payload)
+        self.dispatch(event, payload)
 
     def _onupgrade(self, event):
         _LOGGER.debug('received %s event from transport', event)
-        self.emit(event)
+        self.dispatch(event)
 
     def _queueevent(self, event, *args, **kw):
-        _LOGGER.debug('received %s event from transport', event)
+        _LOGGER.debug('queuing %s event from transport', event)
         self._tmp_event_queue.append(( event, args, kw ))
 
     def _pingloop(self):
-        if self.running:
-            self.sendpacket(PACKET_TYPE_PING, 'probe')
-            self._pingloop_d = t_task.deferLater(self._reactor, self._transport_context.ping_timeout / 1000, self._pingloop)
+        def _sendping():
+            _d = self.sendeiopacket(EIO_TYPE_PING, 'probe')
+            _d.addCallback(_loop)
+            handled = ( t_defer.CancelledError, t_client.ResponseFailed, ReceivedClosePacket, UnknownSessionIdError )
+            _d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when pinging:', handled=handled)
+
+            return _d
+
+        def _loop(_passthru=None):
+            if not self.running:
+                _LOGGER.debug('ping loop halting')
+
+                return
+
+            self._pingloop_d = t_task.deferLater(self._reactor, self._transport_context.ping_interval / 1000, _sendping)
+
+            return _passthru
+
+        _loop()
 
     def _registerstarttransport(self, transport):
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_CLOSE],   self._handleclosestart)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_OPEN],    self._queueevent)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_MESSAGE], self._queueevent)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_NOOP],    self._queueevent)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PING],    self._queueevent)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PONG],    self._queueevent)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_UPGRADE], self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclosestart)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._queueevent)
 
     def _registertransport(self, transport):
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_CLOSE],   self._handleclose)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_OPEN],    self._handleopen)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_MESSAGE], self._onpayload)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_NOOP],    self._onnopayload)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PING],    self._handleping)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PONG],    self._onpayload)
-        transport.register(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_UPGRADE], self._onnopayload)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclose)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._handleopen)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._onpayload)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._onnopayload)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._handleping)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._onpayload)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._onnopayload)
 
     def _unregisterstarttransport(self, transport):
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_CLOSE],   self._handleclosestart)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_OPEN],    self._queueevent)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_MESSAGE], self._queueevent)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_NOOP],    self._queueevent)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PING],    self._queueevent)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PONG],    self._queueevent)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_UPGRADE], self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclosestart)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._queueevent)
 
     def _unregistertransport(self, transport):
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_CLOSE],   self._handleclose)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_OPEN],    self._handleopen)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_MESSAGE], self._onpayload)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_NOOP],    self._onnopayload)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PING],    self._handleping)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_PONG],    self._onpayload)
-        transport.unregister(PACKET_TYPE_NAMES_BY_CODE[PACKET_TYPE_UPGRADE], self._onnopayload)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclose)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._handleopen)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._onpayload)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._onnopayload)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._handleping)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._onpayload)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._onnopayload)
 
 #---- Functions ----------------------------------------------------------
 
@@ -1184,6 +1286,7 @@ def decbinpayloadsgen(raw):
             raise PayloadDecodeError('unrecognized payload type {} at {}'.format(payload_type, pos))
 
         pos += 1
+        payload_len_pos = pos
         payload_len_str = ''
 
         while True:
@@ -1203,11 +1306,9 @@ def decbinpayloadsgen(raw):
             pos += 1
             payload_len_str += str(byte_int)
 
-        payload_len = int(payload_len_str, 10)
-
         # Number.MAX_VALUE ~ 1 * 10 ** 308 or 310 characters
-        if payload_len > 310:
-            raise PayloadDecodeError('{} exceeds max bytes for length field at {}'.format(payload_len, pos))
+        if len(payload_len_str) > 310:
+            raise PayloadDecodeError('{} exceeds max bytes for length field at {}'.format(payload_len_str, payload_len_pos))
 
         payload_len = int(payload_len_str, 10)
         payload = raw[pos:pos + payload_len]
@@ -1222,7 +1323,7 @@ def decbinpayloadsgen(raw):
         yield payload
 
 #=========================================================================
-def decpacket(packet):
+def deceiopacket(packet):
     """
     Decodes a single Engine.IO packet. String packets are returned as
     unicode, either as :class:`~future.types.newstr.newstr` in Python 2
@@ -1236,8 +1337,8 @@ def decpacket(packet):
 
     :returns: a tuple ( ``packet_type``, ``packet_data`` ), where
         ``packet_type`` is one of the values from
-        :const:`PACKET_TYPE_CODES_BY_NAME`, and ``packet_data`` contains
-        the data
+        :const:`EIO_TYPE_CODES_BY_NAME`, and ``packet_data``
+        contains the data
     """
     if isinstance(packet, str):
         try:
@@ -1255,21 +1356,21 @@ def decpacket(packet):
     if len(packet) == 0:
         raise PayloadDecodeError('packet truncated')
 
-    if packet_type not in PACKET_TYPE_NAMES_BY_CODE:
+    if packet_type not in EIO_TYPE_NAMES_BY_CODE:
         raise PayloadDecodeError('unrecognized packet type "{!r}"'.format(packet_type))
 
     return packet_type, packet_data
 
 #=========================================================================
-def decpacketsgen(packets):
+def deceiopacketsgen(packets):
     """
-    Calls :func:`decpacket` on each item in ``packets``.
+    Calls :func:`deceiopacket` on each item in ``packets``.
 
     :param iterable packets: the packets to decode
 
     :returns: an iterable of decoded packets
     """
-    return map(decpacket, packets)
+    return map(deceiopacket, packets)
 
 #=========================================================================
 def encbinpayload(packet):
@@ -1332,12 +1433,12 @@ def encbinpayloadsgen(packets):
             raise type(exc)(exc.args[0] + ' for packet[{}]'.format(i), *exc.args[1:])
 
 #=========================================================================
-def encpacket(packet_type, packet_data = ''):
+def enceiopacket(packet_type, packet_data = ''):
     """
     Encodes a single Engine.IO packet.
 
     :param bytes packet_type: the packet type, one of the values from
-        :const:`PACKET_TYPE_CODES_BY_NAME`
+        :const:`EIO_TYPE_CODES_BY_NAME`
 
     :param packet_data: the packet data (:class:`bytes` for a binary
         packet; :class:`str` (:class:`unicode`) for a string packet)
@@ -1350,7 +1451,7 @@ def encpacket(packet_type, packet_data = ''):
     :raises: :class:`PayloadEncodeError` if `packet_type` is not a
         recognized value
     """
-    if packet_type not in PACKET_TYPE_NAMES_BY_CODE:
+    if packet_type not in EIO_TYPE_NAMES_BY_CODE:
         raise PayloadEncodeError('unrecognized packet type "{!r}"'.format(packet_type))
 
     if isinstance(packet_data, str):
@@ -1361,3 +1462,16 @@ def encpacket(packet_type, packet_data = ''):
         raise TypeError('packet_data type must be one of bytes or str, not {}'.format(type(packet_data).__name__))
 
     return packet_type + packet_data
+
+#=========================================================================
+def jsondumps(*args, **kw):
+    kw.setdefault('use_decimal', True)
+
+    return simplejson.dumps(*args, **kw)
+
+#=========================================================================
+def jsonloads(*args, **kw):
+    kw.setdefault('parse_constant', decimal.Decimal)
+    kw.setdefault('use_decimal', True)
+
+    return simplejson.loads(*args, **kw)

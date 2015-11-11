@@ -367,19 +367,17 @@ def deferredtimeout(reactor, timeout, target_d):
 
     :returns: ``target_d``
     """
-    if timeout < 0:
-        return target_d
+    if timeout >= 0:
+        if reactor is None:
+            from twisted.internet import reactor
 
-    if reactor is None:
-        from twisted.internet import reactor
+        deadline = reactor.callLater(timeout, target_d.cancel)
 
-    deadline = reactor.callLater(timeout, target_d.cancel)
+        def _canceltimeout(_passthru):
+            deadline.cancel()
 
-    def _canceltimeout(_passthru):
-        deadline.cancel()
+            return _passthru
 
-        return _passthru
-
-    target_d.addCallback(_canceltimeout)
+        target_d.addCallback(_canceltimeout)
 
     return target_d
