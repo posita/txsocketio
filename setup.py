@@ -43,9 +43,10 @@ import sys
 __all__ = ()
 
 INSTALL_REQUIRES = [
-    'autobahn',
+    'Twisted >= 15.3',
+    # 'autobahn',
     'future',
-    'twisted',
+    'simplejson >= 3.0.0'
 ]
 
 if sys.version_info[0] <= 2:
@@ -89,8 +90,9 @@ _SETUP_ARGS = {
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
+        # TODO: Twisted isn't ready for these yet; maybe in 15.5?
+        # 'Programming Language :: Python :: 3.3',
+        # 'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: System :: Networking',
@@ -99,9 +101,7 @@ _SETUP_ARGS = {
     'packages'            : setuptools.find_packages(exclude = ( 'tests', )),
     'include_package_data': True,
     'install_requires'    : INSTALL_REQUIRES,
-    'tests_require'       : (
-        'pyOpenSSL',
-    ),
+    'tests_require'       : ( 'hypothesis', ),
     'test_suite'          : 'tests',
 }
 

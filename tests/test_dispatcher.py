@@ -28,17 +28,13 @@ from future.builtins.disabled import * # pylint: disable=redefined-builtin,unuse
 
 import functools
 import logging
-
-try:
-    from unittest import mock # pylint: disable=no-name-in-module,useless-suppression
-except ImportError:
-    import mock # pylint: disable=import-error,useless-suppression
-
 from twisted.python import failure as t_failure
 from twisted.internet import defer as t_defer
 from twisted.trial import unittest as t_unittest
 
 from txsocketio.dispatcher import Dispatcher
+import tests # pylint: disable=unused-import
+from tests.symmetries import mock
 
 #---- Constants ----------------------------------------------------------
 
@@ -68,7 +64,7 @@ class DispatcherTestCase(t_unittest.TestCase):
         super().tearDown()
 
     @mock.patch('txsocketio.dispatcher._LOGGER')
-    def test_emit_exception(self, _LOGGER): # pylint: disable=redefined-outer-name
+    def test_dispatch_exception(self, _LOGGER): # pylint: disable=redefined-outer-name
         dispatcher = Dispatcher()
         raising_handler = mock.Mock(return_value=None)
         dispatcher.register('bingo', raising_handler)
@@ -79,7 +75,7 @@ class DispatcherTestCase(t_unittest.TestCase):
         for e in ( TypeError, ValueError, WeirdoError ):
             raise_e = functools.partial(_raise, e)
             raising_handler.side_effect = raise_e
-            dispatcher.emit('bingo', 'arg', kw='kw')
+            dispatcher.dispatch('bingo', 'arg', kw='kw')
             raising_handler.assert_called_once_with('bingo', 'arg', kw='kw')
             self.assertEqual(_LOGGER.warning.call_count, 1)
             self.assertIsNotNone(_LOGGER.warning.call_args)
@@ -93,7 +89,7 @@ class DispatcherTestCase(t_unittest.TestCase):
             _LOGGER.reset_mock()
 
     @mock.patch('txsocketio.dispatcher._LOGGER')
-    def test_emit_failing_deferred(self, _LOGGER): # pylint: disable=redefined-outer-name
+    def test_dispatch_failing_deferred(self, _LOGGER): # pylint: disable=redefined-outer-name
         dispatcher = Dispatcher()
         results = None
 
@@ -117,7 +113,7 @@ class DispatcherTestCase(t_unittest.TestCase):
             d = t_defer.Deferred()
             raising_handler = functools.partial(_raise_deferred, d, e)
             dispatcher.once('bingo', raising_handler)
-            dispatcher.emit('bingo', 'arg', kw='kw')
+            dispatcher.dispatch('bingo', 'arg', kw='kw')
             d.callback(None)
             self.assertTrue(d.called)
             self.assertEqual(len(results), 1)
@@ -136,13 +132,13 @@ class DispatcherTestCase(t_unittest.TestCase):
         dispatcher = Dispatcher(( 1, 2 ))
         handler = mock.Mock(return_value=None)
         self.assertTrue(dispatcher.register(1, handler))
-        dispatcher.emit(1, 'arg', kw='kw')
+        dispatcher.dispatch(1, 'arg', kw='kw')
         handler.assert_called_once_with(1, 'arg', kw='kw')
         self.assertTrue(dispatcher.unregister(1, handler))
 
         handler.reset_mock()
         self.assertFalse(dispatcher.register(-1, handler))
-        dispatcher.emit(-1, 'arg', kw='kw')
+        dispatcher.dispatch(-1, 'arg', kw='kw')
         handler.assert_not_called()
         self.assertFalse(dispatcher.unregister(-1, handler))
 
@@ -165,7 +161,7 @@ class DispatcherTestCase(t_unittest.TestCase):
         self.assertTrue(dispatcher.register('a', _handler1))
         self.assertFalse(dispatcher.unregister('a', _handler1, once=True))
         self.assertTrue(dispatcher.unregister('a', _handler1))
-        dispatcher.emit('a')
+        dispatcher.dispatch('a')
         self.assertEqual(len(results), 0)
 
         results = {}
@@ -173,7 +169,7 @@ class DispatcherTestCase(t_unittest.TestCase):
         self.assertTrue(dispatcher.once('a', _handler1))
         self.assertFalse(dispatcher.unregister('a', _handler1))
         self.assertTrue(dispatcher.unregister('a', _handler1, once=True))
-        dispatcher.emit('a')
+        dispatcher.dispatch('a')
         self.assertEqual(len(results), 0)
 
         results = {}
@@ -181,7 +177,7 @@ class DispatcherTestCase(t_unittest.TestCase):
         self.assertTrue(dispatcher.on('a', _handler1))
         self.assertTrue(dispatcher.on('a', _handler1))
         self.assertTrue(dispatcher.once('a', _handler2))
-        dispatcher.emit('a')
+        dispatcher.dispatch('a')
 
         expected = {
             1: [ 'a', 'a' ],
@@ -190,21 +186,19 @@ class DispatcherTestCase(t_unittest.TestCase):
 
         self.assertEqual(results, expected)
         self.assertFalse(dispatcher.unregister('a', _handler2, once=True))
-        dispatcher.emit('a')
+        dispatcher.dispatch('a')
         expected[1].extend([ 'a', 'a' ])
         self.assertEqual(results, expected)
         self.assertTrue(dispatcher.unregister('a', _handler1))
-        dispatcher.emit('a')
+        dispatcher.dispatch('a')
         expected[1].append('a')
         self.assertEqual(results, expected)
         self.assertTrue(dispatcher.unregister('a', _handler1))
-        dispatcher.emit('a')
+        dispatcher.dispatch('a')
         self.assertEqual(results, expected)
 
 #---- Initialization -----------------------------------------------------
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
     from unittest import main
     main()

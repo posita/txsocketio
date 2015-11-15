@@ -51,9 +51,9 @@ class Dispatcher(object):
             callback(event, ...)
 
     Callbacks can be registered to be called when the
-    :meth:`~Dispatcher:emit` method is called with a particular ``event``.
-    Any arguments passed to :meth:`~Dispatcher:emit` are passed directly
-    to the callbacks.
+    :meth:`~Dispatcher:dispatch` method is called with a particular
+    ``event``. Any arguments passed to :meth:`~Dispatcher:dispatch` are
+    passed directly to the callbacks.
 
     Callbacks are called serially in the order in which they were
     registered, leaving the concurrence model up to the registrant. Errors
@@ -75,9 +75,10 @@ class Dispatcher(object):
         """
         Creates a :class:`twisted.internet.defer.Deferred` and registers
         its callback to be fired once (see :meth:`~Dispatcher.once`) when
-        ``event`` is next emitted. The event and any arguments are passed
-        to :meth:`twisted.internet.defer.Deferred.callback` as a
-        3-`tuple`: ``( event, args, kw )`` (see :meth:`~Dispatcher.emit`).
+        ``event`` is next dispatched. The event and any arguments are
+        passed to :meth:`twisted.internet.defer.Deferred.callback` as a
+        3-`tuple`: ``( event, args, kw )`` (see
+        :meth:`~Dispatcher.dispatch`).
 
         .. code-block:: python
             :linenos:
@@ -89,9 +90,9 @@ class Dispatcher(object):
             ...     print('handler called with {}, {}, {}'.format(event, args, kw))
             >>> deferred.addCallback(handler) # doctest: +ELLIPSIS
             <Deferred at ...>
-            >>> d.emit('event')
+            >>> d.dispatch('event')
             handler called with event, (), {}
-            >>> d.emit('event')
+            >>> d.dispatch('event')
         """
         d = t_defer.Deferred()
         callback = lambda event, *args, **kw: d.callback(( event, args, kw ))
@@ -101,7 +102,7 @@ class Dispatcher(object):
 
         return d
 
-    def emit(self, event, *args, **kw):
+    def dispatch(self, event, *args, **kw):
         """
         Invokes all callbacks registered for ``event`` with the provided
         ``args`` and ``kw``, one at a time. Exceptions are logged and
@@ -149,20 +150,21 @@ class Dispatcher(object):
             ...   print('handler({})'.format(event))
             >>> d.once('event', handler)
             True
-            >>> d.emit('event')
+            >>> d.dispatch('event')
             handler(event)
-            >>> d.emit('event')
+            >>> d.dispatch('event')
         """
         return self.register(event, callback, once=True)
 
     def register(self, event, callback, once=False):
         """
         Registers ``callback`` to be called when
-        :meth:`~Dispatcher.emit` is subsequently called with a matching
-        ``event``. Arguments passed to :meth:`~Dispatcher.emit` are passed
-        directly to each registered callback, which means that in most
-        cases, callbacks should take care not to modify any mutable
-        arguments, as subsequent callbacks will see the modifications.
+        :meth:`~Dispatcher.dispatch` is subsequently called with a
+        matching ``event``. Arguments passed to
+        :meth:`~Dispatcher.dispatch` are passed directly to each
+        registered callback, which means that in most cases, callbacks
+        should take care not to modify any mutable arguments, as
+        subsequent callbacks will see the modifications.
 
         A callback can be registered multiple times and will be called
         exactly once for each time it is registered. See also
@@ -201,8 +203,8 @@ class Dispatcher(object):
     def unregister(self, event, callback, once=False):
         """
         Unregisters a previously registered ``callback`` so that it will
-        no longer be called when :meth:`~Dispatcher.emit` is called with a
-        matching ``event``.
+        no longer be called when :meth:`~Dispatcher.dispatch` is called
+        with a matching ``event``.
 
         .. code-block:: python
             :linenos:
@@ -214,14 +216,14 @@ class Dispatcher(object):
             True
             >>> d.register('event2', handler)
             True
-            >>> d.emit('event1')
+            >>> d.dispatch('event1')
             handler(event1)
-            >>> d.emit('event2')
+            >>> d.dispatch('event2')
             handler(event2)
             >>> d.unregister('event1', handler)
             True
-            >>> d.emit('event1')
-            >>> d.emit('event2')
+            >>> d.dispatch('event1')
+            >>> d.dispatch('event2')
             handler(event2)
 
         All arguments must match those used with

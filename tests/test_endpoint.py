@@ -43,6 +43,7 @@ from txsocketio.endpoint import (
     ClientEndpointFactory,
     NetLocParseError,
 )
+import tests # pylint: disable=unused-import
 
 #---- Constants ----------------------------------------------------------
 
@@ -178,7 +179,7 @@ class BaseUrlTestCase(t_unittest.TestCase):
         self.assertEqual(subquery.path, sub.path)
         self.assertEqual(subquery.query, base.query)
 
-    def test_parsenetloc(self):
+    def test_parse_netloc(self):
         parsenetloc = BaseUrl.parsenetloc
 
         host = 'hostname'
@@ -257,7 +258,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
     def tearDown(self):
         super().tearDown()
 
-    def test_endpointbadscheme(self):
+    def test_endpoint_bad_scheme(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -265,7 +266,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url = BaseUrl.fromBytes(url_bytes)
         self.assertRaises(t_error.SchemeNotSupported, factory.endpointForURI, url)
 
-    def test_endpointforhttp(self):
+    def test_endpoint_for_http(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -283,8 +284,8 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         self.assertEqual(endpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
         self.assertEqual(endpoint._port, 54321) # pylint: disable=protected-access
 
-    @unittest.skipIf(not hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL not available')
-    def test_endpointforhttps(self):
+    @unittest.skipUnless(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL not available')
+    def test_endpoint_for_https(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -305,7 +306,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         self.assertEqual(endpoint.wrappedEndpoint._port, 54321) # pylint: disable=protected-access
 
     @unittest.skipIf(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL is installed')
-    def test_endpointfornohttps(self):
+    def test_endpoint_for_no_https(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -314,7 +315,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         self.assertRaises(t_error.SchemeNotSupported, factory.endpointForURI, url)
 
     @unittest.skipIf(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL is installed')
-    def test_endpointfornowss(self):
+    def test_endpoint_for_no_wss(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -322,7 +323,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url = BaseUrl.fromBytes(url_bytes)
         self.assertRaises(t_error.SchemeNotSupported, factory.endpointForURI, url)
 
-    def test_endpointforunix(self):
+    def test_endpoint_for_unix(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -332,7 +333,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         self.assertIsInstance(endpoint, t_endpoints.UNIXClientEndpoint)
         self.assertEqual(endpoint._path.encode('utf_8'), b'./tests/node/http.sock') # pylint: disable=protected-access
 
-    def test_endpointforws(self):
+    def test_endpoint_for_ws(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -350,8 +351,8 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         self.assertEqual(endpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
         self.assertEqual(endpoint._port, 12345) # pylint: disable=protected-access
 
-    @unittest.skipIf(not hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL not available')
-    def test_endpointforwss(self):
+    @unittest.skipUnless(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL not available')
+    def test_endpoint_for_wss(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
 
@@ -374,7 +375,5 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
 #---- Initialization -----------------------------------------------------
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
     from unittest import main
     main()

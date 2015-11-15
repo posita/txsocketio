@@ -43,7 +43,7 @@ rm -fv \
 (
     set -x
     cd "${_MY_DIR}/integrations/node"
-    ./node_modules/.bin/node-daemon --socket "${_SOCK}" --worker server.js --workers 1
+    DEBUG='*' ./node_modules/.bin/node-daemon --socket "${_SOCK}" --worker server.js --workers 1
 )
 
 _retval="${?}"
@@ -103,16 +103,13 @@ for t in $( find "${_MY_DIR}/integrations/scripts" -type f -perm +100 -o -name \
     fi
 done
 
-(
-    set -x
-    "${COVERAGE}" run --append -m unittest discover --verbose "${_MY_DIR}/integrations" \
-        || _num_failed="$(( _num_failed + 1 ))"
-)
+( set -x ; "${COVERAGE}" run --append -m unittest discover --pattern 'integration_*.py' --verbose ) \
+    || _num_failed="$(( _num_failed + 1 ))"
 
 (
     set -x
     cd "${_MY_DIR}/integrations/node"
-    _remaining=10
+    _remaining=30
 
     while [ -S "${_SOCK}" ] ; do
         ./node_modules/.bin/node-daemon-ctl --socket "${_SOCK}" stop
