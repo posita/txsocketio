@@ -39,6 +39,7 @@ from twisted.trial import unittest as t_unittest
 from txsocketio.endpoint import BaseUrl
 from txsocketio.engineio import (
     EIO_TYPE_CLOSE,
+    EIO_TYPE_PING,
     EIO_TYPE_NAMES_BY_CODE,
     EngineIo,
     PollingTransport,
@@ -53,7 +54,7 @@ from txsocketio.engineio import (
 from txsocketio.retry import deferredtimeout
 from txsocketio.symmetries import parse
 import tests # pylint: disable=unused-import
-from .symmetries import mock
+from tests.symmetries import mock
 
 #---- Constants ----------------------------------------------------------
 
@@ -343,31 +344,6 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         self.assertEqual(call_args_list, expected)
 
     @t_defer.inlineCallbacks
-    def test_stop_after_started(self):
-        self.url.path = b'/client_close/engine.io/'
-        engineio, handler = self._mkengineio()
-
-        yield engineio.start()
-        self.assertTrue(engineio.running)
-
-        stop_d = engineio.stop()
-        self.assertRaises(TransportStateError, engineio.stop)
-        yield deferredtimeout(reactor, 10, stop_d)
-
-        yield deferredtimeout(reactor, 10, self.close_d)
-        self.assertTrue(self.close_d.called)
-        self.assertFalse(engineio.running)
-        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
-
-        call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
-
-        expected = [
-            mock.call('open'),
-        ]
-
-        self.assertEqual(call_args_list[0], expected[0])
-
-    @t_defer.inlineCallbacks
     def test_hello(self):
         self.url.path = b'/hello/engine.io/'
         engineio, handler = self._mkengineio()
@@ -413,6 +389,60 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
         self.assertEqual(call_args_list, expected)
 
+    @t_defer.inlineCallbacks
+    def test_no_deadlock(self):
+        self.url.path = b'/client_close/engine.io/'
+        engineio, handler = self._mkengineio()
+
+        yield engineio.start()
+
+        ping_ds = []
+
+        for _ in range(10):
+            ping_ds.append(engineio.sendeiopacket(EIO_TYPE_PING, 'probe'))
+
+        for ping_d in ping_ds:
+            yield deferredtimeout(reactor, 10, ping_d)
+
+        yield engineio.stop()
+
+        yield deferredtimeout(reactor, 10, self.close_d)
+        self.assertTrue(self.close_d.called)
+        self.assertFalse(engineio.running)
+        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+
+        call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
+
+        expected = [
+            mock.call('open'),
+        ]
+
+        self.assertEqual(call_args_list[0], expected[0])
+
+    @t_defer.inlineCallbacks
+    def test_stop_after_started(self):
+        self.url.path = b'/client_close/engine.io/'
+        engineio, handler = self._mkengineio()
+
+        yield engineio.start()
+        self.assertTrue(engineio.running)
+
+        engineio.stop()
+        self.assertRaises(TransportStateError, engineio.stop)
+
+        yield deferredtimeout(reactor, 10, self.close_d)
+        self.assertTrue(self.close_d.called)
+        self.assertFalse(engineio.running)
+        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+
+        call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
+
+        expected = [
+            mock.call('open'),
+        ]
+
+        self.assertEqual(call_args_list[0], expected[0])
+
     #---- Private static methods -----------------------------------------
 
     def _mkengineio(self):
@@ -426,7 +456,5 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 #---- Initialization -----------------------------------------------------
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
     from unittest import main
     main()

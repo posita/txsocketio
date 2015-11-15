@@ -21,10 +21,10 @@ install:
 env:
     - TOX_ENV=py27-twisted_15_3-ssl_no
     - TOX_ENV=py27-twisted_15_3-ssl_yes
-    - TOX_ENV=py27-twisted_15_3-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
+    - TOX_ENV=py27-twisted_15_3-ssl_yes TEST_INSIGHT=1
     - TOX_ENV=py27-twisted_15_4-ssl_no
     - TOX_ENV=py27-twisted_15_4-ssl_yes
-    - TOX_ENV=py27-twisted_15_4-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
+    - TOX_ENV=py27-twisted_15_4-ssl_yes TEST_INSIGHT=1
     - TOX_ENV=py27-twisted_trunk-ssl_no
     - TOX_ENV=py27-twisted_trunk-ssl_yes
 
@@ -43,8 +43,8 @@ env:
 
 matrix:
     allow_failures:
-        - env: TOX_ENV=py27-twisted_15_3-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
-        - env: TOX_ENV=py27-twisted_15_4-ssl_yes TEST_DEADLOCK=1 TEST_INSIGHT=1
+        - env: TOX_ENV=py27-twisted_15_3-ssl_yes TEST_INSIGHT=1
+        - env: TOX_ENV=py27-twisted_15_4-ssl_yes TEST_INSIGHT=1
 
         # Twisted trunk is experimental
         - env: TOX_ENV=py27-twisted_trunk-ssl_no

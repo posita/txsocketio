@@ -55,6 +55,16 @@ __all__ = (
 
 _LOGGER = logging.getLogger(__name__)
 
+#---- Exceptions ---------------------------------------------------------
+
+#=========================================================================
+class TimeoutError(Exception):
+    ""
+
+    #---- Public properties ----------------------------------------------
+
+    target_d = None
+
 #---- Interfaces ---------------------------------------------------------
 
 #=========================================================================
@@ -217,7 +227,7 @@ class RetryingCaller(object):
             :attr:`twisted.internet.defer.Failure.value` is a
             :exc:`twisted.internet.defer.CancelledError`.
             """
-            raise_right_now = isinstance(failure.value, t_defer.CancelledError)
+            raise_right_now = isinstance(failure.value, ( t_defer.CancelledError, ))
 
             if isinstance(failure.value, t_defer.FirstError):
                 failure = failure.value.subFailure
@@ -324,6 +334,14 @@ class RetryingCaller(object):
 #=========================================================================
 def calltimeout(reactor, timeout, call, *args, **kw):
     """
+    Shorthand for ``calltimeoutexc(reactor, timeout, call, None, *args,
+    **kw)``.
+    """
+    return calltimeoutexc(reactor, timeout, call, None, *args, **kw)
+
+#=========================================================================
+def calltimeoutexc(reactor, timeout, call, timeout_exc, *args, **kw):
+    """
     Calls :func:`twisted.internet.defer.maybeDeferred` on ``call``,
     ``args``, and ``kw`` and passes the result as the ``target_d``
     argument to :func:`deferredtimeout`.
@@ -338,6 +356,9 @@ def calltimeout(reactor, timeout, call, *args, **kw):
 
     :param callable call: the callable
 
+    :param Exception timeout_exc: the exception to raise instead of a
+        :exc:`TimeoutError`
+
     :param args: passed to ``call``
 
     :param kw: passed to ``call``
@@ -345,13 +366,16 @@ def calltimeout(reactor, timeout, call, *args, **kw):
     :returns: a :class:`twisted.internet.defer.Deferred` wrapping
         ``call``, ``args``, and ``kw``
     """
-    return deferredtimeout(reactor, timeout, t_defer.maybeDeferred(call, *args, **kw))
+    return deferredtimeout(reactor, timeout, t_defer.maybeDeferred(call, *args, **kw), timeout_exc)
 
 #=========================================================================
-def deferredtimeout(reactor, timeout, target_d):
+def deferredtimeout(reactor, timeout, target_d, timeout_exc=None):
     """
-    Calls :meth:`twisted.internet.defer.Deferred.cancel` on ``target_d``
-    after ``timeout`` seconds if it hasn't yet fired and ``timeout >= 0``.
+    Wraps ``target_d`` with a :class:`twisted.internet.defer.Deferred`
+    that calls :meth:`~twisted.internet.defer.Deferred.cancel` on
+    ``target_d`` and returns a :class:`twisted.python.failure.Failure`
+    with a :exc:`TimeoutError` after ``timeout`` seconds if ``target_d``
+    hasn't yet fired and ``timeout >= 0``.
 
     :param reactor: the reactor to use; if `None`, then
         `twisted.internet.reactor` is used
@@ -365,19 +389,50 @@ def deferredtimeout(reactor, timeout, target_d):
 
     :type target_d: :class:`twisted.internet.defer.Deferred`
 
-    :returns: ``target_d``
+    :param Exception timeout_exc: the exception to raise instead of a
+        :exc:`TimeoutError`
+
+    :returns: a :class:`twisted.internet.defer.Deferred` that wraps
+        ``target_d`` if ``timeout >= 0``, otherwise ``target_d``
     """
-    if timeout >= 0:
-        if reactor is None:
-            from twisted.internet import reactor
+    if timeout < 0:
+        return target_d
 
-        deadline = reactor.callLater(timeout, target_d.cancel)
+    if reactor is None:
+        from twisted.internet import reactor
 
-        def _canceltimeout(_passthru):
+    def _timeout():
+        if timeout_exc is None:
+            exc = TimeoutError()
+            exc.target_d = target_d
+        else:
+            exc = timeout_exc
+
+        timeout_d.errback(exc)
+        target_d.cancel()
+
+    deadline = reactor.callLater(timeout, _timeout)
+
+    def _canceler(_):
+        if deadline.active():
             deadline.cancel()
 
-            return _passthru
+        target_d.cancel()
 
-        target_d.addCallback(_canceltimeout)
+    timeout_d = t_defer.Deferred(_canceler)
 
-    return target_d
+    def _handler(_passthru):
+        if deadline.active():
+            deadline.cancel()
+
+        return _passthru
+
+    timeout_d.addBoth(_handler)
+
+    def _suppressalreadycalled(_failure):
+        _failure.trap(t_defer.AlreadyCalledError)
+
+    target_d.chainDeferred(timeout_d)
+    target_d.addErrback(_suppressalreadycalled)
+
+    return timeout_d

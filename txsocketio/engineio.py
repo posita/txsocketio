@@ -25,7 +25,10 @@ _chr = chr
 from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 chr = _chr
 del _chr
-from future.utils import iteritems
+from future.utils import (
+    iteritems,
+    iterkeys,
+)
 
 #---- Imports ------------------------------------------------------------
 
@@ -55,7 +58,7 @@ from .endpoint import (
     ClientEndpointFactory,
 )
 from .logging import logerrback
-# from .retry import deferredtimeout
+from .retry import deferredtimeout
 from .symmetries import (
     cookiejar,
     parse,
@@ -145,6 +148,10 @@ class EngineIoException(Exception):
 
     def __init__(self, *args, **kw):
         super().__init__(*args)
+
+        if set(kw).difference(( 'wrapped_exc', )):
+            raise TypeError('unexpected keyword argument(s): {}'.format(', '.join(iterkeys(kw))))
+
         self.wrapped_exc = kw.get('wrapped_exc')
 
 #=========================================================================
@@ -576,6 +583,10 @@ class PollingTransport(_BaseTransport):
         # self._receiving_d without starting the loop
         self._receiveloop()
 
+    #---- Public properties ----------------------------------------------
+
+    default_timeout = 3
+
     #---- Public hooks ---------------------------------------------------
 
     def connect(self, transport_context):
@@ -627,14 +638,7 @@ class PollingTransport(_BaseTransport):
 
     def sendpacket(self, packet_type, packet_data=''):
         super().sendpacket(packet_type, packet_data)
-        # TODO: BEGIN remove
-        # d = self._sendpacket(packet_type, packet_data)
-        # d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(packet_type, '<WTF?! UNKNOWN PACKET TYPE?!>'), packet_data))
-        # d.addErrback(self._stopconnecting)
-        # d.addErrback(self._shutitdown, lose_connection=True)
-        #
-        # return d
-        # TODO: END remove
+
         return self._send_queue.putpacket(packet_type, packet_data)
 
     def standby(self):
@@ -733,12 +737,6 @@ class PollingTransport(_BaseTransport):
             raise TransportStateError('packets requested when {} state is {!r}'.format(self.__class__.__name__, self.state))
 
         d = self._sessionrequest()
-
-        # TODO: why doesn't this work?
-        # if self._transport_context is not None \
-        #         and self._transport_context.ping_timeout is not None:
-        #     d = deferredtimeout(self._reactor, self._transport_context.ping_timeout / 1000, d)
-
         d.addCallback(self._parsepackets)
 
         return d
@@ -851,7 +849,7 @@ class PollingTransport(_BaseTransport):
         d.addCallback(_sendpacket)
         d.addCallback(self._sendworkerloop)
 
-    def _sessionrequest(self, payload=None, method=None):
+    def _sessionrequest(self, payload=None, method=None, timeout=None):
         request_count, url_bytes = self._nextrequesturl()
         headers = t_http_headers.Headers(self._headers)
 
@@ -866,6 +864,15 @@ class PollingTransport(_BaseTransport):
             _LOGGER.debug('%s-ing[%d] %r to <%s>', method, request_count, payload, url_bytes.decode('utf_8'))
 
         d = self._agent.request(method, url_bytes, headers, body_producer)
+
+        if timeout is None:
+            if self._transport_context is not None \
+                    and self._transport_context.ping_timeout is not None:
+                timeout = self._transport_context.ping_timeout / 1000
+            else:
+                timeout = self.default_timeout
+
+        d = deferredtimeout(self._reactor, timeout, d)
 
         def _responsereceived(_response, _request_count):
             _response.request_count = _request_count
@@ -902,9 +909,12 @@ class PollingTransport(_BaseTransport):
                 return t_defer.execute(lambda: _passthru)
 
             # This may grab a non-cached connection outside of our pool if
-            # all cached connections are in use
+            # all cached connections are in use; in rare cases, this could
+            # trigger <https://github.com/socketio/engine.io/issues/363>,
+            # which is one reason to treat the
+            # :exc:`~twisted.internet.defer.CancelledError` as handled
             _d = self._sendpacket(EIO_TYPE_CLOSE)
-            handled = ( UnknownSessionIdError, )
+            handled = ( t_defer.CancelledError, UnknownSessionIdError, )
             _d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending close packet:', handled=handled)
             _d.addBoth(lambda _: _passthru)
 
@@ -1075,8 +1085,8 @@ class EngineIo(Dispatcher):
         provider.
 
         :returns: a :class:`twisted.internet.defer.Deferred` akin to the
-            :meth:`~ITransport.connect` method of the underlying
-            :class:`ITransport` provider
+            return value from the :meth:`~ITransport.connect` method of
+            the underlying :class:`ITransport` provider
         """
         if self._transport is not None:
             raise TransportStateError('no transport')

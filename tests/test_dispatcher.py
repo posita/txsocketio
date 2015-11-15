@@ -34,7 +34,7 @@ from twisted.trial import unittest as t_unittest
 
 from txsocketio.dispatcher import Dispatcher
 import tests # pylint: disable=unused-import
-from .symmetries import mock
+from tests.symmetries import mock
 
 #---- Constants ----------------------------------------------------------
 
@@ -200,7 +200,5 @@ class DispatcherTestCase(t_unittest.TestCase):
 #---- Initialization -----------------------------------------------------
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
     from unittest import main
     main()

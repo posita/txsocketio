@@ -149,7 +149,5 @@ _load_tests = mkloadtests(_DOCTEST_ROOTS)
 #---- Initialization -----------------------------------------------------
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
     from unittest import main
     main()

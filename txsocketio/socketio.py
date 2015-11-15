@@ -1,4 +1,4 @@
-#-*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: txsocketio.test_engineio -*-
+#-*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: txsocketio.test_socketio -*-
 
 #=========================================================================
 """
@@ -122,19 +122,48 @@ class SocketIo(EngineIo):
 
     def connect(self, path):
         """
-        TODO
+        Sends a Socket.IO ``connect`` packet for ``path``.
+
+        :returns: a :class:`twisted.internet.defer.Deferred` whose
+            callback is fired with a `None` argument after the packet is
+            sent
         """
         return self.sendsiopacket(SIO_TYPE_CONNECT, packet_path=path)
 
     def disconnect(self, path):
         """
-        TODO
+        Sends a Socket.IO ``disconnect`` packet for ``path``.
+
+        :returns: a :class:`twisted.internet.defer.Deferred` whose
+            callback is fired with a `None` argument after the packet is
+            sent
         """
         return self.sendsiopacket(SIO_TYPE_DISCONNECT, packet_path=path)
 
     def emit(self, event, *args, **kw):
         """
-        TODO
+        Sends a Socket.IO ``event`` packet with the equivalent of
+        ``[ event ] + args`` as the ``packet_obj`` argument.
+
+        :param str event: the event name
+
+        :param *args: optional event arguments
+
+        :param str path: this parameter can only be provided as a keyword
+            argument; if provided it will set the path for the ``event``
+            packet
+
+        :param callable callback: this parameter can only be provided as a
+            keyword argument; if provided, it will be called with the
+            results of any ``ack`` packet received that corresponds to the
+            transmitted ``event`` packet (note: whether or not ``acks``
+            are sent in response to ``event`` packets is application-
+            specific; if no ``ack`` is sent, ``callback`` will never be
+            called)
+
+        :returns: a :class:`twisted.internet.defer.Deferred` whose
+            callback is fired with a `None` argument after the packet is
+            sent
         """
         if set(kw).difference(( 'callback', 'path' )):
             raise TypeError('unexpected keyword argument(s): {}'.format(', '.join(iterkeys(kw))))
@@ -151,7 +180,16 @@ class SocketIo(EngineIo):
         Sends a Socket.IO packet via a
         :const:`txsocketio.EIO_TYPE_MESSAGE` Engine.IO packet.
 
-        TODO
+        :param bytes packet_type: the packet type, one of the values from
+            :const:`SIO_TYPE_CODES_BY_NAME`
+
+        :param packet_obj: JSON-encodeable packet data
+
+        :param str packet_path: the Socket.IO path
+
+        :returns: a :class:`twisted.internet.defer.Deferred` whose
+            callback is fired with a `None` argument after the packet is
+            sent
         """
         if packet_type in ( SIO_TYPE_BIN_EVENT, SIO_TYPE_BIN_ACK ):
             raise NotImplementedError('binary Socket.IO packets are currently unsupported')
@@ -198,10 +236,11 @@ def decsiopacket(packet):
 
     :type packet: `bytes` or `str` (`unicode`)
 
-    :returns: a tuple ( ``packet_type``, ``packet_obj``, TODO ), where
-        ``packet_type`` is one of the values from
-        :const:`SIO_TYPE_CODES_BY_NAME`, and ``packet_obj``
-        contains the data
+    :returns: a tuple ``( packet_type, packet_obj, packet_path, packet_id
+        )``, where ``packet_type`` is one of the values from
+        :const:`SIO_TYPE_CODES_BY_NAME`, ``packet_obj`` contains the data,
+        ``packet_path`` is the Socket.IO path, and ``packet_id`` is the
+        packet identifier (or `None` if not set)
     """
     if isinstance(packet, str):
         try:
@@ -261,9 +300,12 @@ def encsiopacket(packet_type, packet_obj, packet_path='/', packet_id=None):
     :param bytes packet_type: the packet type, one of the values from
         :const:`SIO_TYPE_CODES_BY_NAME`
 
-    :param object packet_obj: JSON-encodeable packet data
+    :param packet_obj: JSON-encodeable packet data
 
-    TODO
+    :param str packet_path: the Socket.IO path
+
+    :param Integral packet_id: a packet identifier (used for matching
+        ``ack`` packets with ``event`` packets)
 
     :returns: the packet
 

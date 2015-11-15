@@ -45,13 +45,20 @@ from txsocketio.socketio import (
     encsiopacket,
 )
 import tests # pylint: disable=unused-import
-from tests import JSON
 
 #---- Constants ----------------------------------------------------------
 
 __all__ = ()
 
 _LOGGER = logging.getLogger(__name__)
+
+# We keep out NaN because NaN == NaN is False, which frustrates our
+# comparisons of deep JSON-ified objects; also, we don't allow numbers or
+# nulls in the top level because the Socket.IO packet encoding does not
+# contemplate such things (of course we needed another data encoding
+# format, didn't we?)
+_JSON_CHILDREN = strategies.recursive(strategies.decimals().filter(lambda x: not x.is_nan()) | strategies.booleans() | strategies.text() | strategies.none(), lambda children: strategies.lists(children) | strategies.dictionaries(strategies.text(), children), max_leaves=5)
+_JSON = strategies.one_of(strategies.booleans(), strategies.text(), strategies.lists(_JSON_CHILDREN), strategies.dictionaries(strategies.text(), _JSON_CHILDREN))
 
 #---- Classes ------------------------------------------------------------
 
@@ -76,7 +83,7 @@ class PacketsTestCase(t_unittest.TestCase):
     def tearDown(self):
         super().tearDown()
 
-    @hypothesis.given(packet_type=strategies.sampled_from(set(SIO_TYPE_NAMES_BY_CODE).difference(( SIO_TYPE_BIN_EVENT, SIO_TYPE_BIN_ACK ))), packet_obj=JSON | strategies.just(''), packet_path=strategies.text(alphabet=string.digits + string.letters + '/'), packet_id=strategies.integers(min_value=0) | strategies.none())
+    @hypothesis.given(packet_type=strategies.sampled_from(set(SIO_TYPE_NAMES_BY_CODE).difference(( SIO_TYPE_BIN_EVENT, SIO_TYPE_BIN_ACK ))), packet_obj=_JSON | strategies.just(''), packet_path=strategies.text(alphabet=string.digits + string.letters + '/'), packet_id=strategies.integers(min_value=0) | strategies.none())
     @hypothesis.example(packet_type=SIO_TYPE_EVENT, packet_obj='', packet_path='/', packet_id=None)
     @hypothesis.example(packet_type=SIO_TYPE_EVENT, packet_obj='', packet_path='/', packet_id=0)
     def test_enc_dec(self, packet_type, packet_obj, packet_path, packet_id):
@@ -164,7 +171,5 @@ class PacketsTestCase(t_unittest.TestCase):
 #---- Initialization -----------------------------------------------------
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
     from unittest import main
     main()

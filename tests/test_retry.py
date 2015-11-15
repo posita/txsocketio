@@ -34,7 +34,9 @@ from twisted.trial import unittest as t_unittest
 
 from txsocketio.retry import (
     RetryingCaller,
+    TimeoutError,
     calltimeout,
+    calltimeoutexc,
 )
 import tests # pylint: disable=unused-import
 
@@ -55,75 +57,113 @@ class CallTimeoutTestCase(t_unittest.TestCase):
 
     def setUp(self):
         super().setUp()
+        self._clock = t_task.Clock()
+        self._state = CallTimeoutTestCase._State(self._clock)
 
     def tearDown(self):
         super().tearDown()
 
-    def test_call_timeout(self):
-        clock = t_task.Clock()
-
-        def _nondeferredcall(_val):
-            state['fired'] = True
-
-            return _val
-
-        def _deferredcall(_val, _wait_seconds=1):
-            _d = t_task.deferLater(clock, _wait_seconds, _nondeferredcall, _val)
-
-            return _d
-
-        delay = 0
-        call_val = 'done1'
-        state = { 'fired': False }
-        d = calltimeout(clock, delay, _nondeferredcall, call_val)
-        clock.advance(0)
-        self.assertEqual(d.result, call_val)
-        self.assertTrue(state['fired'])
-
+    def test_deferred_cancel(self):
         delay = 2
-        call_val = 'done2'
-        state = { 'fired': False }
-        d = calltimeout(clock, delay, _nondeferredcall, call_val)
-        clock.advance(0)
-        self.assertEqual(d.result, call_val)
-        self.assertTrue(state['fired'])
-
-        for _ in range(delay + 1):
-            clock.advance(1)
-            self.assertEqual(d.result, call_val)
-            self.assertTrue(state['fired'])
-
-        delay = 0
-        call_val = 'done3'
-        state = { 'fired': False }
-        d = calltimeout(clock, delay, _deferredcall, call_val)
-        clock.advance(0)
-        self.assertIsInstance(d.result.value, t_defer.CancelledError)
-        self.assertFalse(state['fired'])
-        clock.advance(2)
-        self.assertIsInstance(d.result.value, t_defer.CancelledError)
-        self.assertFalse(state['fired'])
+        call_val = 'done'
+        d = calltimeout(self._clock, delay, self._state.deferredcall, call_val, sys.maxsize >> 1)
+        self._clock.advance(0)
+        d.cancel()
+        self._clock.advance(1)
+        self. assertFailure(d, t_defer.CancelledError)
+        self.assertFalse(self._state.fired)
+        self.assertEqual(len(self._clock.getDelayedCalls()), 0)
         d.addErrback(lambda _res: None) # silence the unhandled error
 
+    def test_deferred_delayed(self):
         delay = 2
-        call_val = 'done4'
-        state = { 'fired': False }
-        d = calltimeout(clock, delay, _deferredcall, call_val)
-        clock.advance(0)
+        call_val = 'done'
+        d = calltimeout(self._clock, delay, self._state.deferredcall, call_val)
+        self._clock.advance(0)
         self.assertFalse(hasattr(d, 'result'))
 
         for _ in range(delay + 1):
-            clock.advance(1)
+            self._clock.advance(1)
             self.assertEqual(d.result, call_val)
-            self.assertTrue(state['fired'])
+            self.assertTrue(self._state.fired)
 
+    def test_deferred_immediate(self):
+        delay = 0
+        call_val = 'done'
+        d = calltimeout(self._clock, delay, self._state.deferredcall, call_val)
+        self._clock.advance(0)
+        self. assertFailure(d, TimeoutError)
+        self.assertFalse(self._state.fired)
+        self._clock.advance(2)
+        self. assertFailure(d, TimeoutError)
+        self.assertFalse(self._state.fired)
+        self.assertFalse(self._clock.getDelayedCalls())
+        d.addErrback(lambda _res: None) # silence the unhandled error
+
+    def test_deferred_immediate_exc(self):
+        delay = 0
+        call_val = 'done'
+        d = calltimeoutexc(self._clock, delay, self._state.deferredcall, ValueError, call_val)
+        self._clock.advance(0)
+        self.assertIs(d.result.value, ValueError)
+        self.assertFalse(self._state.fired)
+        self.assertFalse(self._clock.getDelayedCalls())
+        d.addErrback(lambda _res: None) # silence the unhandled error
+
+    def test_deferred_negative_timeout(self):
         delay = -1
-        call_val = 'done5'
-        state = { 'fired': False }
-        d = calltimeout(clock, delay, _deferredcall, call_val, sys.maxsize >> 1)
-        clock.advance(sys.maxsize)
+        call_val = 'done'
+        d = calltimeout(self._clock, delay, self._state.deferredcall, call_val, 9)
+        self._clock.advance(10)
         self.assertEqual(d.result, call_val)
-        self.assertTrue(state['fired'])
+        self.assertTrue(self._state.fired)
+        self.assertFalse(self._clock.getDelayedCalls())
+
+    def test_nondeferred_delayed(self):
+        delay = 2
+        call_val = 'done'
+        d = calltimeout(self._clock, delay, self._state.nondeferredcall, call_val)
+        self._clock.advance(0)
+        self.assertEqual(d.result, call_val)
+        self.assertTrue(self._state.fired)
+
+        for _ in range(delay + 1):
+            self._clock.advance(1)
+            self.assertEqual(d.result, call_val)
+            self.assertTrue(self._state.fired)
+
+        self.assertFalse(self._clock.getDelayedCalls())
+
+    def test_nondeferred_immediate(self):
+        delay = 0
+        call_val = 'done'
+        d = calltimeout(self._clock, delay, self._state.nondeferredcall, call_val)
+        self._clock.advance(0)
+        self.assertEqual(d.result, call_val)
+        self.assertTrue(self._state.fired)
+        self.assertFalse(self._clock.getDelayedCalls())
+
+    #---- Private inner classes ------------------------------------------
+
+    class _State(object):
+
+        #---- Constructor ------------------------------------------------
+
+        def __init__(self, clock):
+            self.clock = clock
+            self.fired = False
+
+        #---- Public methods ---------------------------------------------
+
+        def deferredcall(self, val, wait_seconds=1):
+            d = t_task.deferLater(self.clock, wait_seconds, self.nondeferredcall, val)
+
+            return d
+
+        def nondeferredcall(self, val):
+            self.fired = True
+
+            return val
 
 #=========================================================================
 class RetryingCallerTestCase(t_unittest.TestCase):
@@ -139,6 +179,27 @@ class RetryingCallerTestCase(t_unittest.TestCase):
     def tearDown(self):
         super().tearDown()
         del self._clock
+
+    def test_first_error(self):
+        err_msg = 'Weee!'
+
+        def _none(*_, **__): # pylint: disable=unused-argument
+            return
+
+        def _raise(*_, **__): # pylint: disable=unused-argument
+            raise RuntimeError(err_msg)
+
+        def _call():
+            dl = t_defer.DeferredList(( t_defer.maybeDeferred(_none), t_defer.maybeDeferred(_raise) ), fireOnOneErrback=True, consumeErrors=True)
+
+            return dl
+
+        retrying_caller = RetryingCaller(0, reactor=self._clock)
+        d = retrying_caller.retry(_call)
+        self._clock.advance(0)
+        self. assertFailure(d, RuntimeError)
+        self.assertEqual(d.result.args[0], err_msg)
+        d.addErrback(lambda _res: None) # silence the unhandled error
 
     def test_retry(self):
         retries = 5
@@ -208,27 +269,6 @@ class RetryingCallerTestCase(t_unittest.TestCase):
         self.assertIsInstance(call4.result.value, t_defer.CancelledError)
         self.assertEqual(call4.times_called, 1)
         self.assertEqual(call4.failures_left, retries - 1)
-
-    def test_first_error(self):
-        err_msg = 'Weee!'
-
-        def _none(*_, **__): # pylint: disable=unused-argument
-            return
-
-        def _raise(*_, **__): # pylint: disable=unused-argument
-            raise RuntimeError(err_msg)
-
-        def _call():
-            dl = t_defer.DeferredList(( t_defer.maybeDeferred(_none), t_defer.maybeDeferred(_raise) ), fireOnOneErrback=True, consumeErrors=True)
-
-            return dl
-
-        retrying_caller = RetryingCaller(0, reactor=self._clock)
-        d = retrying_caller.retry(_call)
-        self._clock.advance(0)
-        self.assertIsInstance(d.result.value, RuntimeError)
-        self.assertEqual(d.result.value.args[0], err_msg)
-        d.addErrback(lambda _res: None) # silence the unhandled error
 
 #---- Initialization -----------------------------------------------------
 
