@@ -29,7 +29,7 @@ If such a file did not accompany this software, then please contact the author b
 Introduction
 ============
 
-``txsocketio`` is a :doc:`pure Python module <py>` for accessing `Socket.IO`_ v1.x services from `Twisted`_.
+``txsocketio`` is a :doc:`pure Python module <modules>` for accessing `Socket.IO`_ v1.x services from `Twisted`_.
 
 .. _`Socket.IO`: http://socket.io/
 .. _`Twisted`: https://twistedmatrix.com/

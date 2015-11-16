@@ -28,6 +28,7 @@ from future.builtins.disabled import * # pylint: disable=redefined-builtin,unuse
 import logging as _logging
 
 from .engineio import * # pylint: disable=wildcard-import
+from .socketio import * # pylint: disable=wildcard-import
 from .version import __version__
 
 #---- Constants ----------------------------------------------------------

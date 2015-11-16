@@ -50,6 +50,7 @@ from twisted.web import (
     client as t_client,
     http_headers as t_http_headers,
 )
+import txrc.logging
 from zope import interface # pylint: disable=import-error
 
 from .dispatcher import Dispatcher
@@ -57,8 +58,6 @@ from .endpoint import (
     BaseUrl,
     ClientEndpointFactory,
 )
-from .logging import logerrback
-from .retry import deferredtimeout
 from .symmetries import (
     cookiejar,
     parse,
@@ -625,7 +624,7 @@ class PollingTransport(_BaseTransport):
 
         d.addCallback(_connected)
         d.addErrback(self._shutitdown, lose_connection=True)
-        d.addErrback(logerrback, logger=_LOGGER, msg='Failure while connecting:')
+        d.addErrback(txrc.logging.logerrback, logger=_LOGGER, msg='Failure while connecting:')
 
         return d
 
@@ -804,7 +803,7 @@ class PollingTransport(_BaseTransport):
         self._receiving_d.addErrback(self._stopconnecting)
         self._receiving_d.addErrback(self._shutitdown, lose_connection=True, stop_packets_loop=False)
         handled = ( t_defer.CancelledError, t_client.ResponseFailed, ReceivedClosePacket, UnknownSessionIdError )
-        self._receiving_d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when retrieving packets:', handled=handled)
+        self._receiving_d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when retrieving packets:', handled=handled)
 
     def _sendpacket(self, packet_type, packet_data=''):
         packet = enceiopacket(packet_type, packet_data)
@@ -842,7 +841,7 @@ class PollingTransport(_BaseTransport):
             _d.addErrback(self._shutitdown, lose_connection=True)
             _d.chainDeferred(_callback_d)
             # handled = ( t_defer.CancelledError, t_client.ResponseFailed, UnknownSessionIdError )
-            # _d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(_packet_type, '[WTF?! UNKNOWN PACKET TYPE?!]'), _packet_data), handled=handled)
+            # _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(_packet_type, '[WTF?! UNKNOWN PACKET TYPE?!]'), _packet_data), handled=handled)
 
             return _d
 
@@ -872,7 +871,7 @@ class PollingTransport(_BaseTransport):
             else:
                 timeout = self.default_timeout
 
-        d = deferredtimeout(self._reactor, timeout, d)
+        d = txrc.deferredtimeout(self._reactor, timeout, d)
 
         def _responsereceived(_response, _request_count):
             _response.request_count = _request_count
@@ -915,7 +914,7 @@ class PollingTransport(_BaseTransport):
             # :exc:`~twisted.internet.defer.CancelledError` as handled
             _d = self._sendpacket(EIO_TYPE_CLOSE)
             handled = ( t_defer.CancelledError, UnknownSessionIdError, )
-            _d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending close packet:', handled=handled)
+            _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending close packet:', handled=handled)
             _d.addBoth(lambda _: _passthru)
 
             return _d
@@ -945,7 +944,7 @@ class PollingTransport(_BaseTransport):
 
         def _stoppool(_passthru):
             _d = self._pool.closeCachedConnections()
-            _d.addErrback(logerrback, logger=_LOGGER, msg='Failure in shutting down pool:')
+            _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, msg='Failure in shutting down pool:')
             _d.addBoth(lambda _: _passthru)
 
             return _d
@@ -979,7 +978,7 @@ class PollingTransport(_BaseTransport):
 
         d = _stopconnectingimpl()
         handled = ( t_defer.CancelledError, t_error.ConnectingCancelledError )
-        d.addErrback(logerrback, logger=_LOGGER, msg='Failure raised when canceling pending connection:', handled=handled, suppress_msg_on_handled=False)
+        d.addErrback(txrc.logging.logerrback, logger=_LOGGER, msg='Failure raised when canceling pending connection:', handled=handled, suppress_msg_on_handled=False)
         d.addBoth(lambda _: passthru)
 
         return d
@@ -1211,7 +1210,7 @@ class EngineIo(Dispatcher):
             _d = self.sendeiopacket(EIO_TYPE_PING, 'probe')
             _d.addCallback(_loop)
             handled = ( t_defer.CancelledError, t_client.ResponseFailed, ReceivedClosePacket, UnknownSessionIdError )
-            _d.addErrback(logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when pinging:', handled=handled)
+            _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when pinging:', handled=handled)
 
             return _d
 

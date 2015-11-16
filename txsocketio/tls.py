@@ -1,6 +1,6 @@
 # Adapted from
 # <https://github.com/habnabit/txsocksx/blob/31e7be5418e7bf71df26e8f5a9b87dbb87f2c41f/txsocksx/tls.py>
-# until <https://twistedmatrix.com/trac/ticket/5642> is fixed
+# until <https://tm.tl/#5642> is fixed
 
 # Copyright (c) 2010-2015, Aaron Gallagher <_@habnab.it>
 #

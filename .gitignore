@@ -16,7 +16,6 @@ _trial_temp
 .coverage
 .hypothesis
 .tox
-.vagrant
 .venv
 .venv-*
 .virtualenv
