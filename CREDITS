@@ -15,8 +15,5 @@ contribution.
 
 Contributors:
 
-* Aaron Gallagher <_@habnab.it> (see txsocketio.tls and <https://twistedmatrix.com/trac/ticket/5642>)
-* Roger Hoover <https://github.com/theduderog> (see <https://gist.github.com/theduderog/735556>)
+* Aaron Gallagher <_@habnab.it> (see txsocketio.tls and <https://tm.tl/#5642>)
 * Roy Hyunjin Han <https://github.com/invisibleroads> (see <https://github.com/invisibleroads/socketIO-client>)
-* Terry Jones <http://blogs.fluidinfo.com/terry/about/> (see <http://blogs.fluidinfo.com/terry/2009/11/12/twisted-code-for-retrying-function-calls/>)
-* <https://github.com/htoothrot> (see <https://gist.github.com/theduderog/735556>)

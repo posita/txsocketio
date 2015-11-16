@@ -35,6 +35,7 @@ from twisted.internet import (
     # task as t_task,
 )
 from twisted.trial import unittest as t_unittest
+import txrc
 
 from txsocketio.endpoint import BaseUrl
 from txsocketio.engineio import (
@@ -51,7 +52,6 @@ from txsocketio.engineio import (
     TransportContext,
     TransportStateError,
 )
-from txsocketio.retry import deferredtimeout
 from txsocketio.symmetries import parse
 import tests # pylint: disable=unused-import
 from tests.symmetries import mock
@@ -142,7 +142,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
         send_d = self.transport.sendpacket(EIO_TYPE_CLOSE, '')
         yield send_d
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertEqual(self.transport.state, TRANSPORT_STATE_DISCONNECTED)
         self.assertIsNone(tc.session_id)
@@ -185,7 +185,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
         self.assertEqual(self.transport.state, TRANSPORT_STATE_DISCONNECTED)
         self.assertIsNone(tc.session_id)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertEqual(self.transport.state, TRANSPORT_STATE_DISCONNECTED)
         self.assertIsNone(tc.session_id)
@@ -211,7 +211,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
         self.assertEqual(self.transport.state, TRANSPORT_STATE_DISCONNECTED)
         self.assertIsNone(tc.session_id)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
 
     @t_defer.inlineCallbacks
@@ -250,7 +250,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
         self.assertEqual(self.transport.state, TRANSPORT_STATE_DISCONNECTED)
         self.assertIsNone(tc.session_id)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
 
     @t_defer.inlineCallbacks
@@ -275,7 +275,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
         self.assertEqual(self.transport.state, TRANSPORT_STATE_DISCONNECTED)
         self.assertIsNone(tc.session_id)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
 
 #=========================================================================
@@ -300,7 +300,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         send_d = engineio.sendeiopacket(EIO_TYPE_CLOSE)
         yield send_d
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
         self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
@@ -328,7 +328,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield engineio.start()
         self.assertTrue(engineio.running)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
         self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
@@ -351,7 +351,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield engineio.start()
         self.assertTrue(engineio.running)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
         self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
@@ -374,7 +374,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield engineio.start()
         self.assertTrue(engineio.running)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
         self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
@@ -402,11 +402,11 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
             ping_ds.append(engineio.sendeiopacket(EIO_TYPE_PING, 'probe'))
 
         for ping_d in ping_ds:
-            yield deferredtimeout(reactor, 10, ping_d)
+            yield txrc.deferredtimeout(reactor, 10, ping_d)
 
         yield engineio.stop()
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
         self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
@@ -430,7 +430,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         engineio.stop()
         self.assertRaises(TransportStateError, engineio.stop)
 
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
         self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access

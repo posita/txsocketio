@@ -36,7 +36,6 @@ import multiprocessing # pylint: disable=unused-import
 import inspect
 import os
 from os import path
-import sys
 
 #---- Constants ----------------------------------------------------------
 
@@ -44,13 +43,10 @@ __all__ = ()
 
 INSTALL_REQUIRES = [
     'Twisted >= 15.3',
-    # 'autobahn',
     'future',
-    'simplejson >= 3.0.0'
+    'simplejson >= 3.0.0',
+    'txrc >= 0.1.0, < 0.2.0',
 ]
-
-if sys.version_info[0] <= 2:
-    INSTALL_REQUIRES.append('mock')
 
 _MY_DIR = path.dirname(inspect.getframeinfo(inspect.currentframe()).filename)
 
@@ -101,8 +97,6 @@ _SETUP_ARGS = {
     'packages'            : setuptools.find_packages(exclude = ( 'tests', )),
     'include_package_data': True,
     'install_requires'    : INSTALL_REQUIRES,
-    'tests_require'       : ( 'hypothesis', ),
-    'test_suite'          : 'tests',
 }
 
 if __name__ == '__main__':

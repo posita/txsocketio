@@ -1,7 +1,7 @@
 #-*- encoding: utf-8; grammar-ext: py; mode: python -*-
 # -*- coding: utf-8 -*-
 #
-# txsocketio documentation build configuration file, created by
+# Documentation build configuration file, created by
 # sphinx-quickstart on Mon May 11 22:28:48 2015.
 #
 # This file is execfile()d with the current directory set to its

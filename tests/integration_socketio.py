@@ -36,8 +36,8 @@ from twisted.internet import (
     reactor,
 )
 import unittest
+import txrc
 
-from txsocketio.retry import deferredtimeout
 from txsocketio.socketio import (
     SIO_TYPE_NAMES_BY_CODE,
     SocketIo,
@@ -106,12 +106,12 @@ class SocketIoIntegrationTestCase(SocketIoBaseIntegrationTestCase):
         yield socketio.emit('msg', 'Hey')
         yield socketio.emit('msg', 'you')
         yield socketio.emit('msg', 'guys!', callback=_callback)
-        yield deferredtimeout(reactor, 5, callback_d)
+        yield txrc.deferredtimeout(reactor, 5, callback_d)
         self.assertTrue(callback_d.called)
         self.assertEqual(callback_d.result, ( '/', ( [], ), {} ))
 
         yield socketio.stop()
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(socketio.running)
 
@@ -143,7 +143,7 @@ class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
         from twisted.internet import task as t_task
         yield t_task.deferLater(reactor, 30, lambda: None)
         yield socketio.stop()
-        yield deferredtimeout(reactor, 10, self.close_d)
+        yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(socketio.running)
 
@@ -151,7 +151,7 @@ class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
         self.assertGreater(len(txs), 0)
 
         for tx in txs:
-            self.assertTrue(isinstance(tx.get('valueOut'), decimal.Decimal))
+            self.assertIsInstance(tx.get('valueOut'), decimal.Decimal)
             self.assertGreater(tx.get('valueOut', 0), 0)
             self.assertGreater(len(tx.get('vout', ())), 0)
             self.assertRegexpMatches(tx.get('txid', ''), r'^[0-9A-Fa-f]{64}$')
