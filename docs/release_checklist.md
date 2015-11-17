@@ -33,9 +33,11 @@ index 0123456..fedcba9 100644
 
 - [ ] Set version in [`README.rst`](README.rst) (`master` → `vX.Y.Z`, except for [`https://pypi.python.org/pypi/txsocketio/X.Y.Z`](https://pypi.python.org/pypi/txsocketio/X.Y.Z))
 
-- [ ] `git commit -a -m 'Update version and release vX.Y.Z.'`
+- [ ] `git commit --all --message 'Update version and release vX.Y.Z.'`
 
-- [ ] `git tag -s -f -m 'Release vX.Y.Z.' vX.Y.Z`
+- [ ] `git tag --sign --force --message 'Release vX.Y.Z.' vX.Y.Z`
+
+- [ ] `git push --tags`
 
 - [ ] `./setup.py sdist upload`
 
@@ -43,4 +45,4 @@ index 0123456..fedcba9 100644
 
 - [ ] `git checkout master`
 
-- [ ] `git branch -d X.Y.Z-release`
+- [ ] `git branch --delete X.Y.Z-release`

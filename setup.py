@@ -45,7 +45,7 @@ INSTALL_REQUIRES = [
     'Twisted >= 15.3',
     'future',
     'simplejson >= 3.0.0',
-    'txrc >= 0.1.0, < 0.2.0',
+    'txrc >= 0.1.0, < 0.3.0',
 ]
 
 _MY_DIR = path.dirname(inspect.getframeinfo(inspect.currentframe()).filename)
@@ -79,7 +79,7 @@ _SETUP_ARGS = {
     # From <https://pypi.python.org/pypi?%3Aaction=list_classifiers>
     'classifiers': (
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'Development Status :: 1 - Planning',
+        'Development Status :: 3 - Alpha',
         'Framework :: Twisted',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
