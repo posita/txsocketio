@@ -31,7 +31,7 @@ index 0123456..fedcba9 100644
 +__release__ = 'vX.Y.Z'
 ```
 
-- [ ] Set version in [`README.rst`](README.rst) (`master` → `vX.Y.Z`, except for [`https://pypi.python.org/pypi/txsocketio/X.Y.Z`](https://pypi.python.org/pypi/txsocketio/X.Y.Z))
+- [ ] Set version in [`README.rst`](README.rst) (`master` → `vX.Y.Z`; [`https://pypi.python.org/pypi/txsocketio`](https://pypi.python.org/pypi/txsocketio) → [`https://pypi.python.org/pypi/txsocketio/X.Y.Z`](https://pypi.python.org/pypi/txsocketio/X.Y.Z);  [`https://img.shields.io/pypi/.../txsocketio.svg`](https://img.shields.io/pypi/.../txsocketio.svg) →  [`https://img.shields.io/pypi/.../txsocketio/X.Y.Z.svg`](https://img.shields.io/pypi/.../txsocketio/X.Y.Z.svg))
 
 - [ ] `git commit --all --message 'Update version and release vX.Y.Z.'`
 

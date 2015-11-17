@@ -39,29 +39,29 @@ Jeff Knupp (|@jeffknupp|_) `describes how <https://www.jeffknupp.com/blog/2013/0
 ``txsocketio`` - Twisted Socket.IO Client
 =========================================
 
-.. image:: https://pypip.in/version/txsocketio/badge.svg
-    :target: https://pypi.python.org/pypi/txsocketio/
-    :alt: [Latest Version]
+.. image:: https://img.shields.io/pypi/v/txsocketio.svg
+    :target: https://pypi.python.org/pypi/txsocketio
+    :alt: [master Version]
 
 .. image:: https://readthedocs.org/projects/txsocketio/badge/?version=master
     :target: https://txsocketio.readthedocs.org/en/master/
-    :alt: [Documentation]
+    :alt: [master Documentation]
 
-.. image:: https://pypip.in/license/txsocketio/badge.svg
-    :target: https://opensource.org/licenses/MIT
-    :alt: [License]
+.. image:: https://img.shields.io/pypi/l/txsocketio.svg
+    :target: http://opensource.org/licenses/MIT
+    :alt: [master License]
 
-.. image:: https://pypip.in/py_versions/txsocketio/badge.svg
-    :target: https://pypi.python.org/pypi/txsocketio/master
-    :alt: [Supported Python Versions]
+.. image:: https://img.shields.io/pypi/pyversions/txsocketio.svg
+    :target: https://pypi.python.org/pypi/txsocketio
+    :alt: [master Supported Python Versions]
 
-.. image:: https://pypip.in/implementation/txsocketio/badge.svg
-    :target: https://pypi.python.org/pypi/txsocketio/master
-    :alt: [Supported Python Implementations]
+.. image:: https://img.shields.io/pypi/implementation/txsocketio.svg
+    :target: https://pypi.python.org/pypi/txsocketio
+    :alt: [master Supported Python Implementations]
 
-.. image:: https://pypip.in/status/txsocketio/badge.svg
-    :target: https://pypi.python.org/pypi/txsocketio/master
-    :alt: [Development Stage]
+.. image:: https://img.shields.io/pypi/status/txsocketio.svg
+    :target: https://pypi.python.org/pypi/txsocketio
+    :alt: [master Development Stage]
 
 ..
 
