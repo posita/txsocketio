@@ -148,7 +148,12 @@ class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
         self.assertFalse(socketio.running)
 
         txs = [ i[0][2][1] for i in handler.call_args_list if i[0][0] == 'event' and i[0][2][0] == 'tx' ]
-        self.assertGreater(len(txs), 0)
+
+        if len(txs) == 0:
+            try:
+                import debug # TODO pylint: disable=reimported,unused-variable,useless-suppression
+            except ImportError:
+                self.assertGreater(len(txs), 0)
 
         for tx in txs:
             self.assertIsInstance(tx.get('valueOut'), decimal.Decimal)

@@ -34,7 +34,6 @@ from .engineio import (
     EIO_TYPE_MESSAGE,
     EIO_TYPE_NAMES_BY_CODE,
     EngineIo,
-    EngineIoException,
     PayloadDecodeError,
     PayloadEncodeError,
     jsondumps,
@@ -54,7 +53,6 @@ __all__ = (
     'SIO_TYPE_EVENT',
     'SIO_TYPE_NAMES_BY_CODE',
     'SocketIo',
-    'SocketIoException',
 )
 
 SIO_TYPE_CONNECT    = bytes(b'0')
@@ -92,12 +90,6 @@ _PACKET_RES = (
 _PACKET_RE_FLAGS = re.DOTALL | re.VERBOSE
 
 _LOGGER = logging.getLogger(__name__)
-
-#---- Exceptions ---------------------------------------------------------
-
-#=========================================================================
-class SocketIoException(EngineIoException):
-    ""
 
 #---- Classes ------------------------------------------------------------
 

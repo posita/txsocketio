@@ -568,12 +568,13 @@ class PollingTransport(_BaseTransport):
 
         self._reactor = reactor
         self._pool = pool if pool is not None else self._builddefaultpool()
-        # We need at least two persistent connections (one for polling for
-        # packets and one for sending them)
-        self._pool.maxPersistentPerHost = max(self._pool.maxPersistentPerHost, 2)
-        # Leave one connection for polling
-        self._send_queue = PollingTransport._SendQueue(backlog=self._pool.maxPersistentPerHost - 1)
-        self._sending_ds = collections.deque()
+        # We need two connections (one for polling for packets and one for
+        # sending them); anything more is a waste, since we only allow one
+        # poll request at a time (because that's all that the server can
+        # handle)
+        self._pool.maxPersistentPerHost = 2
+        self._send_lock = t_defer.DeferredLock()
+        self._pending_request_ds = collections.deque()
         self._agent = agent if agent is not None else self._builddefaultagent()
         self._connecting_d = None
         self._disconnecting_d = None
@@ -592,17 +593,12 @@ class PollingTransport(_BaseTransport):
         super().connect(transport_context)
         self.state = TRANSPORT_STATE_CONNECTING
 
-        def _startsendworkerloops():
-            for _ in range(self._send_queue.backlog):
-                self._sendworkerloop()
-
         if self.transport_context.session_id is not None:
             # Assume that we're "upgrading" our own transport and that a
             # session has already been established; also assume that the
             # session is still good
             self.state = TRANSPORT_STATE_RECEIVING
             d = t_defer.succeed(None)
-            _startsendworkerloops()
             self._receiveloop()
 
             return d
@@ -618,7 +614,6 @@ class PollingTransport(_BaseTransport):
 
         def _connected(_passthru):
             self.state = TRANSPORT_STATE_CONNECTED
-            _startsendworkerloops()
 
             return _passthru
 
@@ -637,8 +632,21 @@ class PollingTransport(_BaseTransport):
 
     def sendpacket(self, packet_type, packet_data=''):
         super().sendpacket(packet_type, packet_data)
+        d = self._send_lock.run(self._sendpacket, packet_type, packet_data)
+        self._pending_request_ds.append(d)
 
-        return self._send_queue.putpacket(packet_type, packet_data)
+        def _done(_passthru):
+            self._pending_request_ds.remove(d)
+
+            return _passthru
+
+        d.addBoth(_done)
+        d.addErrback(self._stopconnecting)
+        d.addErrback(self._shutitdown, lose_connection=True)
+        # handled = ( t_defer.CancelledError, t_client.ResponseFailed, UnknownSessionIdError )
+        # d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(_packet_type, '[WTF?! UNKNOWN PACKET TYPE?!]'), _packet_data), handled=handled)
+
+        return d
 
     def standby(self):
         super().standby()
@@ -646,18 +654,6 @@ class PollingTransport(_BaseTransport):
         d.addBoth(self._shutitdown, lose_connection=False)
 
         return d
-
-    #---- Private inner classes ------------------------------------------
-
-    class _SendQueue(t_defer.DeferredQueue):
-
-        #---- Public methods ---------------------------------------------
-
-        def putpacket(self, packet_type, packet_data):
-            callback_d = t_defer.Deferred()
-            self.put(( callback_d, packet_type, packet_data ))
-
-            return callback_d
 
     #---- Private methods ------------------------------------------------
 
@@ -818,36 +814,6 @@ class PollingTransport(_BaseTransport):
 
         return d
 
-    def _sendworkerloop(self, _=None):
-        if self.state not in ( TRANSPORT_STATE_CONNECTED, TRANSPORT_STATE_RECEIVING ):
-            _LOGGER.debug('send worker loop halting')
-
-            return
-
-        d = self._send_queue.get()
-        self._sending_ds.append(d)
-
-        def _sendpacket(_queue_item):
-            _callback_d, _packet_type, _packet_data = _queue_item
-            _d = self._sendpacket(_packet_type, _packet_data)
-
-            def __done(__passthru):
-                self._sending_ds.remove(d)
-
-                return __passthru
-
-            _d.addBoth(__done)
-            _d.addErrback(self._stopconnecting)
-            _d.addErrback(self._shutitdown, lose_connection=True)
-            _d.chainDeferred(_callback_d)
-            # handled = ( t_defer.CancelledError, t_client.ResponseFailed, UnknownSessionIdError )
-            # _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(_packet_type, '[WTF?! UNKNOWN PACKET TYPE?!]'), _packet_data), handled=handled)
-
-            return _d
-
-        d.addCallback(_sendpacket)
-        d.addCallback(self._sendworkerloop)
-
     def _sessionrequest(self, payload=None, method=None, timeout=None):
         request_count, url_bytes = self._nextrequesturl()
         headers = t_http_headers.Headers(self._headers)
@@ -924,14 +890,14 @@ class PollingTransport(_BaseTransport):
         else:
             d = t_defer.execute(lambda: passthru)
 
-        def _stopsendworkerloops(_passthru):
-            _dl = t_defer.DeferredList(self._sending_ds, consumeErrors=True)
+        def _cancelpendingrequests(_passthru):
+            _dl = t_defer.DeferredList(self._pending_request_ds, consumeErrors=True)
             _dl.cancel()
             _dl.addBoth(lambda _: _passthru)
 
             return _dl
 
-        d.addBoth(_stopsendworkerloops)
+        d.addBoth(_cancelpendingrequests)
 
         def _stopreceiveloop(_passthru):
             self._receiving_d.cancel()
