@@ -23,6 +23,7 @@ from __future__ import (
 )
 from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.moves.urllib import parse as url_parse
 from future.utils import itervalues
 
 #---- Imports ------------------------------------------------------------
@@ -52,7 +53,6 @@ from txsocketio.engineio import (
     TransportContext,
     TransportStateError,
 )
-from txsocketio.symmetries import parse
 import tests # pylint: disable=unused-import
 from tests.symmetries import mock
 
@@ -75,7 +75,7 @@ class BaseIntegrationTestCase(t_unittest.TestCase):
         super().setUp()
         self.url = BaseUrl.fromString(b'unix://<sockpath>/<path>')
         sockpath = './integrations/node/http.sock'
-        self.url.netloc = parse.quote(sockpath.encode('utf_8'), safe=b'').encode('ascii')
+        self.url.netloc = url_parse.quote(sockpath.encode('utf_8'), safe=b'').encode('ascii')
         self.close_d = t_defer.Deferred()
 
         def _close_handler(event):

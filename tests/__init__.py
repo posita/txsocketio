@@ -47,11 +47,17 @@ _LOG_FMT = os.environ.get('_TXSOCKETIO_LOG_FMT')
 
 #---- Initialization -----------------------------------------------------
 
-# Python 3.4 complains that assertRaisesRegexp is deprecated in favor of
-# assertRaisesRegex, which Python 2.7's unittest doesn't have; this
-# monkey patch fixes all that
+# Python 3.4 complains that the assert*Regexp* methods are deprecated in
+# favor of the analogous assert*Regex methods, which Python 2.7's unittest
+# doesn't have; this monkey patch fixes all that nonsense
 if not hasattr(unittest.TestCase, 'assertRaisesRegex'):
     unittest.TestCase.assertRaisesRegex = unittest.TestCase.assertRaisesRegexp
+
+if not hasattr(unittest.TestCase, 'assertRegex'):
+    unittest.TestCase.assertRegex = unittest.TestCase.assertRegexpMatches
+
+if not hasattr(unittest.TestCase, 'assertNotRegex'):
+    unittest.TestCase.assertNotRegex = unittest.TestCase.assertNotRegexpMatches
 
 # TODO: swap checks once <https://tm.tl/#8110> is fixed
 if sys.version_info[0] <= 2:

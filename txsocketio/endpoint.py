@@ -22,6 +22,7 @@ from __future__ import (
 )
 from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.moves.urllib import parse as url_parse
 
 #---- Imports ------------------------------------------------------------
 
@@ -46,8 +47,6 @@ from twisted.web import (
     iweb as t_iweb,
 )
 from zope import interface # pylint: disable=import-error
-
-from .symmetries import parse
 
 #---- Constants ----------------------------------------------------------
 
@@ -100,7 +99,7 @@ class BaseUrl(t_urlpath.URLPath):
         for host, port in zip(*zip_args):
             if host is not None:
                 port = int(port) if port else defaultport
-                host_quoted = parse.quote(host, safe=b':')
+                host_quoted = url_parse.quote(host, safe=b':')
 
                 # This works properly in Python 2 because str maps to
                 # :class:`future.types.newstr` (it *may* also work in
@@ -339,7 +338,7 @@ class ClientEndpointFactory(object):
             return endpoint
 
         if uri.scheme == b'unix':
-            path = parse.unquote(uri.netloc.decode('ascii'))
+            path = url_parse.unquote(uri.netloc.decode('ascii'))
             uri.netloc = b'localhost'
 
             return t_endpoints.UNIXClientEndpoint(self.reactor, path)

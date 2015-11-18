@@ -21,10 +21,9 @@ from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
 from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-_chr = chr
 from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-chr = _chr
-del _chr
+from builtins import chr
+from future.moves.urllib import parse as url_parse
 from future.utils import (
     iteritems,
     iterkeys,
@@ -35,6 +34,7 @@ from future.utils import (
 import collections
 import decimal
 import functools
+from http import cookiejar
 import io
 import logging
 # import pprint
@@ -57,10 +57,6 @@ from .dispatcher import Dispatcher
 from .endpoint import (
     BaseUrl,
     ClientEndpointFactory,
-)
-from .symmetries import (
-    cookiejar,
-    parse,
 )
 
 #---- Constants ----------------------------------------------------------
@@ -619,7 +615,7 @@ class PollingTransport(_BaseTransport):
 
         d.addCallback(_connected)
         d.addErrback(self._shutitdown, lose_connection=True)
-        d.addErrback(txrc.logging.logerrback, logger=_LOGGER, msg='Failure while connecting:')
+        # d.addErrback(txrc.logging.logerrback, log_lvl=logging.DEBUG, logger=_LOGGER, msg='Failure while connecting:')
 
         return d
 
@@ -644,7 +640,7 @@ class PollingTransport(_BaseTransport):
         d.addErrback(self._stopconnecting)
         d.addErrback(self._shutitdown, lose_connection=True)
         # handled = ( t_defer.CancelledError, t_client.ResponseFailed, UnknownSessionIdError )
-        # d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(_packet_type, '[WTF?! UNKNOWN PACKET TYPE?!]'), _packet_data), handled=handled)
+        # d.addErrback(txrc.logging.logerrback, log_lvl=logging.WARNING, logger=_LOGGER, msg='Failure raised when sending packet <{}:{!r}>:'.format(EIO_TYPE_NAMES_BY_CODE.get(_packet_type, '[WTF?! UNKNOWN PACKET TYPE?!]'), _packet_data), handled=handled)
 
         return d
 
@@ -723,7 +719,7 @@ class PollingTransport(_BaseTransport):
         if self.transport_context.session_id is not None:
             query[b't'] = '{}-{}'.format(int(time.time() * 1000), request_count).encode('utf_8')
 
-        url_bytes = self.transport_context.base_url.replace(query=parse.urlencode(query)).unsplit()
+        url_bytes = self.transport_context.base_url.replace(query=url_parse.urlencode(query)).unsplit()
 
         return request_count, url_bytes
 
@@ -799,7 +795,7 @@ class PollingTransport(_BaseTransport):
         self._receiving_d.addErrback(self._stopconnecting)
         self._receiving_d.addErrback(self._shutitdown, lose_connection=True, stop_packets_loop=False)
         handled = ( t_defer.CancelledError, t_client.ResponseFailed, ReceivedClosePacket, UnknownSessionIdError )
-        self._receiving_d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when retrieving packets:', handled=handled)
+        self._receiving_d.addErrback(txrc.logging.logerrback, log_lvl=logging.WARNING, logger=_LOGGER, msg='Failure raised when retrieving packets:', handled=handled)
 
     def _sendpacket(self, packet_type, packet_data=''):
         packet = enceiopacket(packet_type, packet_data)
@@ -880,7 +876,7 @@ class PollingTransport(_BaseTransport):
             # :exc:`~twisted.internet.defer.CancelledError` as handled
             _d = self._sendpacket(EIO_TYPE_CLOSE)
             handled = ( t_defer.CancelledError, UnknownSessionIdError, )
-            _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when sending close packet:', handled=handled)
+            _d.addErrback(txrc.logging.logerrback, log_lvl=logging.WARNING, logger=_LOGGER, msg='Failure raised when sending close packet:', handled=handled)
             _d.addBoth(lambda _: _passthru)
 
             return _d
@@ -910,7 +906,7 @@ class PollingTransport(_BaseTransport):
 
         def _stoppool(_passthru):
             _d = self._pool.closeCachedConnections()
-            _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, msg='Failure in shutting down pool:')
+            _d.addErrback(txrc.logging.logerrback, log_lvl=logging.DEBUG, logger=_LOGGER, msg='Failure in shutting down pool:')
             _d.addBoth(lambda _: _passthru)
 
             return _d
@@ -944,7 +940,7 @@ class PollingTransport(_BaseTransport):
 
         d = _stopconnectingimpl()
         handled = ( t_defer.CancelledError, t_error.ConnectingCancelledError )
-        d.addErrback(txrc.logging.logerrback, logger=_LOGGER, msg='Failure raised when canceling pending connection:', handled=handled, suppress_msg_on_handled=False)
+        d.addErrback(txrc.logging.logerrback, log_lvl=logging.DEBUG, logger=_LOGGER, msg='Failure raised when canceling pending connection:', handled=handled, suppress_msg_on_handled=False)
         d.addBoth(lambda _: passthru)
 
         return d
@@ -1064,7 +1060,7 @@ class EngineIo(Dispatcher):
         def _startconnected(_):
             _d = self._transport.standby()
 
-            def __upgradetransport(__): # pylint: disable=unused-argument
+            def __upgradetransport(_):
                 self._unregisterstarttransport(self._transport)
                 upgrades = [ t for t in self._transport_context.upgrades if t in self._transport_factories ]
 
@@ -1176,7 +1172,7 @@ class EngineIo(Dispatcher):
             _d = self.sendeiopacket(EIO_TYPE_PING, 'probe')
             _d.addCallback(_loop)
             handled = ( t_defer.CancelledError, t_client.ResponseFailed, ReceivedClosePacket, UnknownSessionIdError )
-            _d.addErrback(txrc.logging.logerrback, logger=_LOGGER, log_lvl=logging.WARNING, msg='Failure raised when pinging:', handled=handled)
+            _d.addErrback(txrc.logging.logerrback, log_lvl=logging.WARNING, logger=_LOGGER, msg='Failure raised when pinging:', handled=handled)
 
             return _d
 
