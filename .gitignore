@@ -14,6 +14,7 @@
 __pycache__
 _trial_temp
 .coverage
+.eggs
 .hypothesis
 .tox
 .venv
@@ -22,7 +23,6 @@ _trial_temp
 *_flymake.py
 *.egg
 *.egg-info
-*.eggs
 build
 dist
 docs/_build

@@ -23,6 +23,7 @@ from __future__ import (
 from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.moves.urllib import parse as url_parse
+from future.utils import native
 
 #---- Imports ------------------------------------------------------------
 
@@ -174,7 +175,7 @@ class BaseUrl(t_urlpath.URLPath):
         try:
             # This is to get around the faulty URLPath constructor that
             # tries to call :meth:`future.types.newbytes.encode`
-            scheme = scheme.__native__()
+            scheme = native(scheme)
         except AttributeError:
             pass
 
