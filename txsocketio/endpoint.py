@@ -1,55 +1,46 @@
-#-*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: txsocketio.test_endpoint -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: test.test_endpoint -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.moves.urllib import parse as url_parse
 from future.utils import native
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import functools
 import posixpath
 import re
 from twisted.internet import endpoints as t_endpoints
-
-try:
-    if not hasattr(t_endpoints, 'TLSWrapperClientEndpoint'):
-        # Monkey patch until <https://tm.tl/5642> is fixed
-        from txsocketio.tls import TLSWrapClientEndpoint
-        t_endpoints.TLSWrapperClientEndpoint = TLSWrapClientEndpoint
-        del TLSWrapClientEndpoint
-except ImportError:
-    pass
-
 from twisted.python import urlpath as t_urlpath
 from twisted.web import (
     client as t_client,
     error as t_error,
     iweb as t_iweb,
 )
-from zope import interface # pylint: disable=import-error
+from zope import interface
 
-#---- Constants ----------------------------------------------------------
+try:
+    from twisted.internet import ssl as t_ssl
+except ImportError:
+    _SSL_SUPPORTED = False
+else:
+    _SSL_SUPPORTED = hasattr(t_ssl, 'optionsForClientTLS')
+
+# ---- Constants ---------------------------------------------------------
 
 __all__ = (
     'BaseUrl',
@@ -62,22 +53,22 @@ _NETLOC_RE = re.compile(r'''^(:?
             | \[(?P<host3>[:0-9a-f]+)\]:(?P<port3>[1-9][0-9]*)
     )$''', re.IGNORECASE | re.VERBOSE)
 
-#---- Exceptions ---------------------------------------------------------
+# ---- Exceptions --------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class NetLocParseError(Exception):
     ""
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class BaseUrl(t_urlpath.URLPath):
     """
     Basically a :class:`twisted.python.urlpath.URLPath` with a
     :meth:`join` method similar to :func:`posixpath.join`.
     """
 
-    #---- Public static methods ------------------------------------------
+    # ---- Public static methods -----------------------------------------
 
     @staticmethod
     def parsenetloc(netloc, defaultport=None):
@@ -113,7 +104,7 @@ class BaseUrl(t_urlpath.URLPath):
 
                 return host_quoted, port
 
-    #---- Public class methods -------------------------------------------
+    # ---- Public class methods ------------------------------------------
 
     @classmethod
     def fromURI(cls, uri):
@@ -128,7 +119,7 @@ class BaseUrl(t_urlpath.URLPath):
         """
         return cls.fromBytes(uri.toBytes())
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     @classmethod
     def fromBytes(cls, url_bytes):
@@ -139,7 +130,7 @@ class BaseUrl(t_urlpath.URLPath):
 
         return cls.fromString(url_bytes.decode('ascii'))
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def asscheme(self, scheme, keepQuery=False):
         """
@@ -278,7 +269,7 @@ class BaseUrl(t_urlpath.URLPath):
 
         return val
 
-    #---- Private hooks --------------------------------------------------
+    # ---- Private hooks -------------------------------------------------
 
     def _pathMod(self, newpathsegs, keepQuery):
         if keepQuery:
@@ -290,7 +281,7 @@ class BaseUrl(t_urlpath.URLPath):
 
         return BaseUrl(self.scheme, self.netloc, posixpath.join(*newpathsegs), query, fragment)
 
-#=========================================================================
+# ========================================================================
 @interface.implementer(t_iweb.IAgentEndpointFactory)
 class ClientEndpointFactory(object):
     """
@@ -309,12 +300,12 @@ class ClientEndpointFactory(object):
     would be with a ``http(s)://`` or ``ws(s)://`` URL.
     """
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self, reactor):
         self.reactor = reactor
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def endpointForURI(self, uri):
         if uri.scheme in ( b'http', b'https', b'ws', b'wss' ):
@@ -323,18 +314,11 @@ class ClientEndpointFactory(object):
             endpoint = t_endpoints.HostnameEndpoint(self.reactor, host, port)
 
             if defaultport == 443:
-                ssl_supported = hasattr(t_endpoints, 'TLSWrapperClientEndpoint')
-
-                try:
-                    from twisted.internet.ssl import optionsForClientTLS
-                except ImportError:
-                    ssl_supported = False
-
-                if not ssl_supported:
+                if not _SSL_SUPPORTED:
                     raise t_error.SchemeNotSupported('{} not supported (OpenSSL is not available)'.format(uri.scheme.decode('utf_8')))
 
-                options = optionsForClientTLS(host.decode('utf_8'))
-                endpoint = t_endpoints.TLSWrapperClientEndpoint(options, endpoint)
+                options = t_ssl.optionsForClientTLS(host.decode('utf_8'))
+                endpoint = t_endpoints.wrapClientTLS(options, endpoint)
 
             return endpoint
 

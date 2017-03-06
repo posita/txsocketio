@@ -1,35 +1,28 @@
-#-*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: txsocketio.test_engineio -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: test.test_engineio -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from builtins import chr
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.moves.urllib import parse as url_parse
 from future.utils import (
     iteritems,
     iterkeys,
 )
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import collections
 import decimal
@@ -51,7 +44,7 @@ from twisted.web import (
     http_headers as t_http_headers,
 )
 import txrc.logging
-from zope import interface # pylint: disable=import-error
+from zope import interface
 
 from .dispatcher import Dispatcher
 from .endpoint import (
@@ -59,7 +52,7 @@ from .endpoint import (
     ClientEndpointFactory,
 )
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = (
     'EIO_TYPE_CLOSE',
@@ -90,22 +83,22 @@ EIO_PROTOCOL = 3
 TRANSPORT_POLLING = 'polling'
 TRANSPORT_WEBSOCKETS = 'websocket'
 
-EIO_TYPE_OPEN    = bytes(b'0')
-EIO_TYPE_CLOSE   = bytes(b'1')
-EIO_TYPE_PING    = bytes(b'2')
-EIO_TYPE_PONG    = bytes(b'3')
+EIO_TYPE_OPEN = bytes(b'0')
+EIO_TYPE_CLOSE = bytes(b'1')
+EIO_TYPE_PING = bytes(b'2')
+EIO_TYPE_PONG = bytes(b'3')
 EIO_TYPE_MESSAGE = bytes(b'4')
 EIO_TYPE_UPGRADE = bytes(b'5')
-EIO_TYPE_NOOP    = bytes(b'6')
+EIO_TYPE_NOOP = bytes(b'6')
 
 EIO_TYPE_NAMES_BY_CODE = {
-    EIO_TYPE_OPEN:    'open',
-    EIO_TYPE_CLOSE:   'close',
-    EIO_TYPE_PING:    'ping',
-    EIO_TYPE_PONG:    'pong',
+    EIO_TYPE_OPEN: 'open',
+    EIO_TYPE_CLOSE: 'close',
+    EIO_TYPE_PING: 'ping',
+    EIO_TYPE_PONG: 'pong',
     EIO_TYPE_MESSAGE: 'message',
     EIO_TYPE_UPGRADE: 'upgrade',
-    EIO_TYPE_NOOP:    'noop',
+    EIO_TYPE_NOOP: 'noop',
 }
 
 EIO_TYPE_CODES_BY_NAME = dict(( ( v, k ) for k, v in iteritems(EIO_TYPE_NAMES_BY_CODE) ))
@@ -133,13 +126,13 @@ _PAYLOAD_TYPES = (
 
 _LOGGER = logging.getLogger(__name__)
 
-#---- Exceptions ---------------------------------------------------------
+# ---- Exceptions --------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class EngineIoException(Exception):
     ""
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self, *args, **kw):
         super().__init__(*args)
@@ -149,43 +142,43 @@ class EngineIoException(Exception):
 
         self.wrapped_exc = kw.get('wrapped_exc')
 
-#=========================================================================
+# ========================================================================
 class PayloadDecodeError(EngineIoException):
     ""
 
-#=========================================================================
+# ========================================================================
 class PayloadEncodeError(EngineIoException):
     ""
 
-#=========================================================================
+# ========================================================================
 class EngineIoServerError(EngineIoException):
     ""
 
-#=========================================================================
+# ========================================================================
 class MethodMismatchError(EngineIoServerError):
     ""
 
-#=========================================================================
+# ========================================================================
 class ReceivedClosePacket(EngineIoException):
     ""
 
-#=========================================================================
+# ========================================================================
 class TransportMismatchError(EngineIoServerError):
     ""
 
-#=========================================================================
+# ========================================================================
 class TransportStateError(EngineIoException):
     ""
 
-#=========================================================================
+# ========================================================================
 class UnexpectedServerError(EngineIoServerError):
     ""
 
-#=========================================================================
+# ========================================================================
 class UnknownSessionIdError(EngineIoServerError):
     ""
 
-#=========================================================================
+# ========================================================================
 class UnrecognizedTransportError(EngineIoServerError):
     ""
 
@@ -202,17 +195,17 @@ _ENGINEIO_EXC_BY_ERR_CODE = {
     _ENGINEIO_BAD_REQUEST_ERR: TransportMismatchError,
 }
 
-#---- Interfaces ---------------------------------------------------------
+# ---- Interfaces --------------------------------------------------------
 
-#=========================================================================
-class ITransport(interface.Interface):
+# ========================================================================
+class ITransport(interface.Interface):  # pylint: disable=inherit-non-class
     """
     An interface for a Transport capable of sending and receiving
     Engine.IO packets.
     """
     # pylint: disable=no-method-argument,no-self-argument,useless-suppression
 
-    #---- Attributes -----------------------------------------------------
+    # ---- Attributes ----------------------------------------------------
 
     state = interface.Attribute('state', """
         States and transitions:
@@ -238,7 +231,7 @@ class ITransport(interface.Interface):
         implement all paths (see :meth:`~ITransport.connect`).
         """)
 
-    #---- Hooks ----------------------------------------------------------
+    # ---- Hooks ---------------------------------------------------------
 
     def connect(transport_context):
         """
@@ -316,31 +309,31 @@ class ITransport(interface.Interface):
             of ``disconnected`` and ``disconnecting``
         """
 
-#=========================================================================
-class ITransportFactory(interface.Interface):
+# ========================================================================
+class ITransportFactory(interface.Interface):  # pylint: disable=inherit-non-class
     """
     An interface for a factory capable of building an :class:`ITransport`
     provider.
     """
     # pylint: disable=no-method-argument,no-self-argument,useless-suppression
 
-    #---- Hooks ----------------------------------------------------------
+    # ---- Hooks ---------------------------------------------------------
 
     def buildTransport(reactor):
         """
         Builds the new :class:`ITransport` provider.
         """
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class TransportContext(object):
     """
     Common state shared created by (and possibly shared among)
     :class:`ITransport` providers.
     """
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self, base_url):
         ""
@@ -348,7 +341,7 @@ class TransportContext(object):
         self._base_url = base_url
         self.clear()
 
-    #---- Public properties ----------------------------------------------
+    # ---- Public properties ---------------------------------------------
 
     @property
     def base_url(self):
@@ -393,7 +386,7 @@ class TransportContext(object):
         """
         return self._upgrades
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def clear(self):
         """
@@ -424,11 +417,11 @@ class TransportContext(object):
         self._session_id = session_id
         self._upgrades = upgrades
 
-#=========================================================================
+# ========================================================================
 class _BaseTransport(Dispatcher):
     ""
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self):
         """
@@ -441,7 +434,7 @@ class _BaseTransport(Dispatcher):
         self._state = TRANSPORT_STATE_DISCONNECTED
         self._transport_context = None
 
-    #---- Public properties ----------------------------------------------
+    # ---- Public properties ---------------------------------------------
 
     @property
     def state(self):
@@ -467,7 +460,7 @@ class _BaseTransport(Dispatcher):
         """
         return self._transport_context
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def connect(self, transport_context):
         if self.state != TRANSPORT_STATE_DISCONNECTED:
@@ -479,7 +472,7 @@ class _BaseTransport(Dispatcher):
         if self.state in ( TRANSPORT_STATE_DISCONNECTED, TRANSPORT_STATE_DISCONNECTING ):
             raise TransportStateError('{} state is {!r}'.format(self.__class__.__name__, self.state))
 
-    def sendpacket(self, packet_type, packet_data): # pylint: disable=unused-argument
+    def sendpacket(self, packet_type, packet_data):  # pylint: disable=unused-argument
         if self.state not in ( TRANSPORT_STATE_CONNECTED, TRANSPORT_STATE_RECEIVING ):
             raise TransportStateError('{} state is not {!r} or {!r}'.format(self.__class__.__name__, TRANSPORT_STATE_CONNECTED, TRANSPORT_STATE_RECEIVING))
 
@@ -487,7 +480,7 @@ class _BaseTransport(Dispatcher):
         if self.state not in ( TRANSPORT_STATE_CONNECTED, TRANSPORT_STATE_RECEIVING ):
             raise TransportStateError('{} state is not {!r} or {!r}'.format(self.__class__.__name__, TRANSPORT_STATE_CONNECTED, TRANSPORT_STATE_RECEIVING))
 
-#=========================================================================
+# ========================================================================
 @interface.implementer(ITransport)
 class PollingTransport(_BaseTransport):
     """
@@ -495,7 +488,7 @@ class PollingTransport(_BaseTransport):
     and dispatches received packets as events.
     """
 
-    #---- Public inner classes -------------------------------------------
+    # ---- Public inner classes ------------------------------------------
 
     @interface.implementer(ITransportFactory)
     class Factory(object):
@@ -503,7 +496,7 @@ class PollingTransport(_BaseTransport):
         A :class:`PollingTransport` factory.
         """
 
-        #---- Constructor ------------------------------------------------
+        # ---- Constructor -----------------------------------------------
 
         def __init__(self, agent=None, pool=None, headers=None):
             """
@@ -521,7 +514,7 @@ class PollingTransport(_BaseTransport):
 
             self.buildTransport = functools.partial(PollingTransport, **kw)
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self, reactor, agent=None, pool=None, headers=None):
         """
@@ -555,7 +548,7 @@ class PollingTransport(_BaseTransport):
         self._request_count = 0
 
         self._headers = {
-            b'Accept':         [ b'application/octet-stream', b'application/json' ],
+            b'Accept': [ b'application/octet-stream', b'application/json' ],
             b'Accept-Charset': [ b'UTF-8' ],
         }
 
@@ -579,11 +572,11 @@ class PollingTransport(_BaseTransport):
         # self._receiving_d without starting the loop
         self._receiveloop()
 
-    #---- Public properties ----------------------------------------------
+    # ---- Public properties ---------------------------------------------
 
     default_timeout = 3
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def connect(self, transport_context):
         super().connect(transport_context)
@@ -601,17 +594,17 @@ class PollingTransport(_BaseTransport):
 
         d = self._connecting_d = self._packetsrequest()
 
-        def _done(_passthru):
+        def _done(passthru):
             self._connecting_d = None
 
-            return _passthru
+            return passthru
 
         d.addBoth(_done)
 
-        def _connected(_passthru):
+        def _connected(passthru):
             self.state = TRANSPORT_STATE_CONNECTED
 
-            return _passthru
+            return passthru
 
         d.addCallback(_connected)
         d.addErrback(self._shutitdown, lose_connection=True)
@@ -631,10 +624,10 @@ class PollingTransport(_BaseTransport):
         d = self._send_lock.run(self._sendpacket, packet_type, packet_data)
         self._pending_request_ds.append(d)
 
-        def _done(_passthru):
+        def _done(passthru):
             self._pending_request_ds.remove(d)
 
-            return _passthru
+            return passthru
 
         d.addBoth(_done)
         d.addErrback(self._stopconnecting)
@@ -651,7 +644,7 @@ class PollingTransport(_BaseTransport):
 
         return d
 
-    #---- Private methods ------------------------------------------------
+    # ---- Private methods -----------------------------------------------
 
     def _builddefaultagent(self):
         endpoint_factory = ClientEndpointFactory(self._reactor)
@@ -663,7 +656,7 @@ class PollingTransport(_BaseTransport):
         return agent
 
     def _builddefaultpool(self):
-        pool = t_client.HTTPConnectionPool(self._reactor) #, persistent=False)
+        pool = t_client.HTTPConnectionPool(self._reactor)  # , persistent=False)
         pool.retryAutomatically = True
 
         return pool
@@ -802,9 +795,9 @@ class PollingTransport(_BaseTransport):
         payload = encbinpayload(packet)
         d = self._sessionrequest(payload)
 
-        def _checkbody(_request_with_body):
-            if _request_with_body.body != 'ok':
-                raise UnexpectedServerError('unrecognized response from request[{}]: {!r}'.format(_request_with_body.request_count, _request_with_body.body))
+        def _checkbody(request_with_body):
+            if request_with_body.body != 'ok':
+                raise UnexpectedServerError('unrecognized response from request[{}]: {!r}'.format(request_with_body.request_count, request_with_body.body))
 
         d.addCallback(_checkbody)
 
@@ -835,18 +828,18 @@ class PollingTransport(_BaseTransport):
 
         d = txrc.deferredtimeout(self._reactor, timeout, d)
 
-        def _responsereceived(_response, _request_count):
-            _response.request_count = _request_count
-            _LOGGER.debug('response code from request[%d]: %d %s', _request_count, _response.code, _response.phrase.decode('utf_8'))
-            # _LOGGER.debug('response headers from request[%d]:', _request_count)
-            # _LOGGER.debug(pprint.pformat(list(_response.headers.getAllRawHeaders())))
+        def _responsereceived(response, request_count):
+            response.request_count = request_count
+            _LOGGER.debug('response code from request[%d]: %d %s', request_count, response.code, response.phrase.decode('utf_8'))
+            # _LOGGER.debug('response headers from request[%d]:', request_count)
+            # _LOGGER.debug(pprint.pformat(list(response.headers.getAllRawHeaders())))
 
-            _d = t_client.readBody(_response)
+            _d = t_client.readBody(response)
 
-            def __bodyreceived(__body):
-                _response.body = __body
+            def __bodyreceived(body):
+                response.body = body
 
-                return _response
+                return response
 
             _d.addCallback(__bodyreceived)
 
@@ -865,9 +858,9 @@ class PollingTransport(_BaseTransport):
 
             return passthru
 
-        def _trysendclose(_passthru):
+        def _trysendclose(passthru):
             if self.transport_context.session_id is None:
-                return t_defer.execute(lambda: _passthru)
+                return t_defer.execute(lambda: passthru)
 
             # This may grab a non-cached connection outside of our pool if
             # all cached connections are in use; in rare cases, this could
@@ -877,7 +870,7 @@ class PollingTransport(_BaseTransport):
             _d = self._sendpacket(EIO_TYPE_CLOSE)
             handled = ( t_defer.CancelledError, UnknownSessionIdError, )
             _d.addErrback(txrc.logging.logerrback, log_lvl=logging.WARNING, logger=_LOGGER, msg='Failure raised when sending close packet:', handled=handled)
-            _d.addBoth(lambda _: _passthru)
+            _d.addBoth(lambda _: passthru)
 
             return _d
 
@@ -886,34 +879,34 @@ class PollingTransport(_BaseTransport):
         else:
             d = t_defer.execute(lambda: passthru)
 
-        def _cancelpendingrequests(_passthru):
+        def _cancelpendingrequests(passthru):
             _dl = t_defer.DeferredList(self._pending_request_ds, consumeErrors=True)
             _dl.cancel()
-            _dl.addBoth(lambda _: _passthru)
+            _dl.addBoth(lambda _: passthru)
 
             return _dl
 
         d.addBoth(_cancelpendingrequests)
 
-        def _stopreceiveloop(_passthru):
+        def _stopreceiveloop(passthru):
             self._receiving_d.cancel()
-            self._receiving_d.addBoth(lambda _: _passthru)
+            self._receiving_d.addBoth(lambda _: passthru)
 
             return self._receiving_d
 
         if stop_packets_loop:
             d.addBoth(_stopreceiveloop)
 
-        def _stoppool(_passthru):
+        def _stoppool(passthru):
             _d = self._pool.closeCachedConnections()
             _d.addErrback(txrc.logging.logerrback, log_lvl=logging.DEBUG, logger=_LOGGER, msg='Failure in shutting down pool:')
-            _d.addBoth(lambda _: _passthru)
+            _d.addBoth(lambda _: passthru)
 
             return _d
 
         d.addBoth(_stoppool)
 
-        def _finished(_passthru):
+        def _finished(passthru):
             if lose_connection:
                 self.transport_context.clear()
 
@@ -922,7 +915,7 @@ class PollingTransport(_BaseTransport):
             if lose_connection:
                 self.dispatch(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE])
 
-            return _passthru
+            return passthru
 
         d.addBoth(_finished)
 
@@ -934,9 +927,7 @@ class PollingTransport(_BaseTransport):
                 _LOGGER.debug('_stopconnectingimpl canceling self._connecting_d')
                 self._connecting_d.cancel()
 
-            f = lambda: self._connecting_d
-
-            return t_defer.maybeDeferred(f)
+            return t_defer.maybeDeferred(lambda: self._connecting_d)
 
         d = _stopconnectingimpl()
         handled = ( t_defer.CancelledError, t_error.ConnectingCancelledError )
@@ -945,7 +936,7 @@ class PollingTransport(_BaseTransport):
 
         return d
 
-#=========================================================================
+# ========================================================================
 class EngineIo(Dispatcher):
     """
     Abstracts an Engine.IO connection, handling any underlying transport
@@ -978,7 +969,7 @@ class EngineIo(Dispatcher):
         :class:`twisted.internet.interfaces.IReactorUNIX` (as necessary)
     """
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self, base_url, transport_factories=None, reactor=None):
         super().__init__()
@@ -1020,14 +1011,14 @@ class EngineIo(Dispatcher):
         # case we try to cancel it before we start the loop
         self._pingloop_d.callback(None)
 
-    #---- Public properties ----------------------------------------------
+    # ---- Public properties ---------------------------------------------
 
     @property
     def running(self):
         return self._transport is not None \
             and self._transport.state == TRANSPORT_STATE_RECEIVING
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def sendeiopacket(self, packet_type, packet_data=''):
         """
@@ -1078,10 +1069,10 @@ class EngineIo(Dispatcher):
 
         d.addCallback(_startconnected)
 
-        def _cleanup(_passthru):
+        def _cleanup(passthru):
             self._dispatchqueuedevents()
 
-            return _passthru
+            return passthru
 
         d.addBoth(_cleanup)
 
@@ -1100,7 +1091,7 @@ class EngineIo(Dispatcher):
 
         return self._transport.disconnect()
 
-    #---- Private methods ------------------------------------------------
+    # ---- Private methods -----------------------------------------------
 
     def _dispatchqueuedevents(self):
         while self._tmp_event_queue:
@@ -1123,7 +1114,7 @@ class EngineIo(Dispatcher):
             yield self._pingloop_d
         except t_defer.CancelledError:
             _LOGGER.debug('ping loop canceled')
-        except Exception: # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.debug('ping loop erred', exc_info=True)
         else:
             _LOGGER.debug('ping loop completed')
@@ -1176,7 +1167,7 @@ class EngineIo(Dispatcher):
 
             return _d
 
-        def _loop(_passthru=None):
+        def _loop(passthru=None):
             if not self.running:
                 _LOGGER.debug('ping loop halting')
 
@@ -1184,49 +1175,49 @@ class EngineIo(Dispatcher):
 
             self._pingloop_d = t_task.deferLater(self._reactor, self._transport_context.ping_interval / 1000, _sendping)
 
-            return _passthru
+            return passthru
 
         _loop()
 
     def _registerstarttransport(self, transport):
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclosestart)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE], self._handleclosestart)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN], self._queueevent)
         transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._queueevent)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._queueevent)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._queueevent)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP], self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING], self._queueevent)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG], self._queueevent)
         transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._queueevent)
 
     def _registertransport(self, transport):
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclose)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._handleopen)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE], self._handleclose)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN], self._handleopen)
         transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._onpayload)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._onnopayload)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._handleping)
-        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._onpayload)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP], self._onnopayload)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING], self._handleping)
+        transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG], self._onpayload)
         transport.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._onnopayload)
 
     def _unregisterstarttransport(self, transport):
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclosestart)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE], self._handleclosestart)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN], self._queueevent)
         transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._queueevent)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._queueevent)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._queueevent)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP], self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING], self._queueevent)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG], self._queueevent)
         transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._queueevent)
 
     def _unregistertransport(self, transport):
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE],   self._handleclose)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN],    self._handleopen)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_CLOSE], self._handleclose)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_OPEN], self._handleopen)
         transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._onpayload)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP],    self._onnopayload)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING],    self._handleping)
-        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG],    self._onpayload)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_NOOP], self._onnopayload)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PING], self._handleping)
+        transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_PONG], self._onpayload)
         transport.unregister(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_UPGRADE], self._onnopayload)
 
-#---- Functions ----------------------------------------------------------
+# ---- Functions ---------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 def decbinpayloadsgen(raw):
     """
     Decodes a binary Engine.IO message containing zero or more payloads
@@ -1293,7 +1284,7 @@ def decbinpayloadsgen(raw):
         pos += payload_len
         yield payload
 
-#=========================================================================
+# ========================================================================
 def deceiopacket(packet):
     """
     Decodes a single Engine.IO packet. String packets are returned as
@@ -1332,7 +1323,7 @@ def deceiopacket(packet):
 
     return packet_type, packet_data
 
-#=========================================================================
+# ========================================================================
 def deceiopacketsgen(packets):
     """
     Calls :func:`deceiopacket` on each item in ``packets``.
@@ -1343,7 +1334,7 @@ def deceiopacketsgen(packets):
     """
     return map(deceiopacket, packets)
 
-#=========================================================================
+# ========================================================================
 def encbinpayload(packet):
     """
     Encodes an Engine.IO packet as an Engine.IO payload. A unicode packet
@@ -1370,7 +1361,7 @@ def encbinpayload(packet):
 
     return bytes(( payload_type, )) + payload_len_bytes + bytes(( 255, )) + packet
 
-#=========================================================================
+# ========================================================================
 def encbinpayloads(packets):
     """
     Encodes zero or more Engine.IO packets by calling
@@ -1385,7 +1376,7 @@ def encbinpayloads(packets):
     # See github:PythonCharmers/python-future#172
     return bytes(b''.join(encbinpayloadsgen(packets)))
 
-#=========================================================================
+# ========================================================================
 def encbinpayloadsgen(packets):
     """
     Encodes zero or more Engine.IO packets by calling
@@ -1403,8 +1394,8 @@ def encbinpayloadsgen(packets):
         except Exception as exc:
             raise type(exc)(exc.args[0] + ' for packet[{}]'.format(i), *exc.args[1:])
 
-#=========================================================================
-def enceiopacket(packet_type, packet_data = ''):
+# ========================================================================
+def enceiopacket(packet_type, packet_data=''):
     """
     Encodes a single Engine.IO packet.
 
@@ -1434,13 +1425,13 @@ def enceiopacket(packet_type, packet_data = ''):
 
     return packet_type + packet_data
 
-#=========================================================================
+# ========================================================================
 def jsondumps(*args, **kw):
     kw.setdefault('use_decimal', True)
 
     return simplejson.dumps(*args, **kw)
 
-#=========================================================================
+# ========================================================================
 def jsonloads(*args, **kw):
     kw.setdefault('parse_constant', decimal.Decimal)
     kw.setdefault('use_decimal', True)

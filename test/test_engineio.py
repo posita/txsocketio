@@ -1,30 +1,24 @@
 #!/usr/bin/env python
-#-*- encoding: utf-8; grammar-ext: py; mode: python -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import logging
 import hypothesis
@@ -49,22 +43,22 @@ from txsocketio.engineio import (
     encbinpayloadsgen,
     enceiopacket,
 )
-import tests # pylint: disable=unused-import
+import test  # noqa: F401; pylint: disable=unused-import
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = ()
 
 _LOGGER = logging.getLogger(__name__)
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
 # TODO
-# #=========================================================================
+# # ========================================================================
 # @interface.implementer(t_iweb.IResponse)
 # class MockResponse(object):
 #
-#     #---- Constructor ----------------------------------------------------
+#     # ---- Constructor ---------------------------------------------------
 #
 #     def __init__(self, body=b''):
 #         self.version = ( b'HTTP', 1, 1 )
@@ -75,7 +69,7 @@ _LOGGER = logging.getLogger(__name__)
 #         self.previousResponse = None
 #         self.setBody(body)
 #
-#     #---- Public hooks ---------------------------------------------------
+#     # ---- Public hooks --------------------------------------------------
 #
 #     def deliverBody(self, protocol):
 #         protocol.dataReceived(self.body)
@@ -84,7 +78,7 @@ _LOGGER = logging.getLogger(__name__)
 #     def setPreviousResponse(self, response):
 #         self.previousResponse = response
 #
-#     #---- Public methods -------------------------------------------------
+#     # ---- Public methods ------------------------------------------------
 #
 #     def setBody(self, body=b''):
 #         self._body = b''
@@ -92,12 +86,12 @@ _LOGGER = logging.getLogger(__name__)
 #         self.headers = [ h for h in self.headers if h[0] != b'Content-Length' ]
 #         self.headers.append(( b'Content-Length', str(self.length).encode('ascii') ))
 
-#=========================================================================
+# ========================================================================
 class PacketsTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public constants -----------------------------------------------
+    # ---- Public constants ----------------------------------------------
 
     GOOD_STR_TYPE = EIO_TYPE_CODES_BY_NAME['ping']
     GOOD_STR_DATA = str('{}')
@@ -110,7 +104,7 @@ class PacketsTestCase(t_unittest.TestCase):
     BAD_TYPE_BIN_PACKET = BAD_TYPE + GOOD_BIN_DATA
     BAD_TRUNC_PACKET = ''
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -213,12 +207,12 @@ class PacketsTestCase(t_unittest.TestCase):
         for i, packet_type_data in enumerate(packets_type_data):
             self.assertEqual(packet_type_data, deceiopacket(enceiopacket(*packet_type_data)), msg='packet_type_data[{}]: {!r}'.format(i, packet_type_data))
 
-#=========================================================================
+# ========================================================================
 class PayloadsTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public constants -----------------------------------------------
+    # ---- Public constants ----------------------------------------------
 
     GOOD_STR_PACKET = str('4{}')
     GOOD_STR_PACKET_PAYLOAD = bytes(b'\x00\x03\xff' + GOOD_STR_PACKET.encode('utf_8'))
@@ -230,7 +224,7 @@ class PayloadsTestCase(t_unittest.TestCase):
     BAD_LEN_VALUE_PAYLOAD = bytes(b'\x00' + b'\x09' * 311 + b'\xff6')
     BAD_TRUNC_PAYLOAD = bytes(b'\x00\x03\xff4')
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -514,12 +508,12 @@ class PayloadsTestCase(t_unittest.TestCase):
         actual = [ deceiopacket(pckt) for pckt in decbinpayloadsgen(raw) ]
         self.assertEqual(expected, actual)
 
-#=========================================================================
+# ========================================================================
 class TransportContextTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -548,7 +542,7 @@ class TransportContextTestCase(t_unittest.TestCase):
         self.assertIsNone(tc.session_id)
         self.assertIsNone(tc.upgrades)
 
-#---- Initialization -----------------------------------------------------
+# ---- Initialization ----------------------------------------------------
 
 if __name__ == '__main__':
     from unittest import main

@@ -14,11 +14,12 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
-# ---- Constants ---------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
-__all__ = ()
-
-__version__ = ( 0, 0, 0 )
-__vers_str__ = '.'.join(( str(_) for _ in __version__ ))
-__release__ = 'v' + __vers_str__
+try:
+    from unittest import mock  # pylint: disable=no-name-in-module,unused-import,useless-suppression
+except ImportError:
+    import mock  # noqa: F401; pylint: disable=import-error,unused-import,useless-suppression

@@ -1,30 +1,24 @@
 #!/usr/bin/env python
-#-*- encoding: utf-8; grammar-ext: py; mode: python -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import functools
 import logging
@@ -33,29 +27,29 @@ from twisted.internet import defer as t_defer
 from twisted.trial import unittest as t_unittest
 
 from txsocketio.dispatcher import Dispatcher
-import tests # pylint: disable=unused-import
-from tests.symmetries import mock
+import test  # noqa: F401; pylint: disable=unused-import
+from test.symmetries import mock
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = ()
 
 _LOGGER = logging.getLogger(__name__)
 
-#---- Exceptions ---------------------------------------------------------
+# ---- Exceptions --------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class WeirdoError(Exception):
     pass
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class DispatcherTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -64,13 +58,13 @@ class DispatcherTestCase(t_unittest.TestCase):
         super().tearDown()
 
     @mock.patch('txsocketio.dispatcher._LOGGER')
-    def test_dispatch_exception(self, _LOGGER): # pylint: disable=redefined-outer-name
+    def test_dispatch_exception(self, _LOGGER):
         dispatcher = Dispatcher()
         raising_handler = mock.Mock(return_value=None)
         dispatcher.register('bingo', raising_handler)
 
-        def _raise(_err, _event, *_args, **_kw): # pylint: disable=unused-argument
-            raise _err(_event + ' no-go')
+        def _raise(err, event, *_args, **_kw):
+            raise err(event + ' no-go')
 
         for e in ( TypeError, ValueError, WeirdoError ):
             raise_e = functools.partial(_raise, e)
@@ -89,24 +83,24 @@ class DispatcherTestCase(t_unittest.TestCase):
             _LOGGER.reset_mock()
 
     @mock.patch('txsocketio.dispatcher._LOGGER')
-    def test_dispatch_failing_deferred(self, _LOGGER): # pylint: disable=redefined-outer-name
+    def test_dispatch_failing_deferred(self, _LOGGER):
         dispatcher = Dispatcher()
         results = None
 
-        def _raise_deferred(_d, _err, _event, *_args, **_kw): # pylint: disable=unused-argument
+        def _raise_deferred(d, err, event, *_args, **_kw):
             def __raise(_):
-                raise _err(_event + ' no-go')
+                raise err(event + ' no-go')
 
-            _d.addCallback(__raise)
+            d.addCallback(__raise)
 
-            def _recordresult(_arg):
-                results.append(_arg)
+            def _recordresult(arg):
+                results.append(arg)
 
-                return _arg
+                return arg
 
-            _d.addBoth(_recordresult)
+            d.addBoth(_recordresult)
 
-            return _d
+            return d
 
         for e in ( TypeError, ValueError, WeirdoError ):
             results = []
@@ -145,13 +139,13 @@ class DispatcherTestCase(t_unittest.TestCase):
     def test_registration(self):
         results = None
 
-        def _handler(_i, _event):
+        def _handler(i, event):
             try:
-                l = results[_i]
+                l = results[i]
             except KeyError:
-                l = results[_i] = []
+                l = results[i] = []
 
-            l.append(_event)
+            l.append(event)
 
         _handler1 = functools.partial(_handler, 1)
         _handler2 = functools.partial(_handler, 2)
@@ -197,7 +191,7 @@ class DispatcherTestCase(t_unittest.TestCase):
         dispatcher.dispatch('a')
         self.assertEqual(results, expected)
 
-#---- Initialization -----------------------------------------------------
+# ---- Initialization ----------------------------------------------------
 
 if __name__ == '__main__':
     from unittest import main

@@ -1,37 +1,28 @@
 #!/usr/bin/env python
-#-*- encoding: utf-8; grammar-ext: py; mode: python -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import logging
-import sys
 import unittest
-import twisted
 from twisted.internet import endpoints as t_endpoints
-from twisted.python import versions as t_versions
 from twisted.trial import unittest as t_unittest
 from twisted.web import (
     client as t_client,
@@ -42,25 +33,24 @@ from txsocketio.endpoint import (
     BaseUrl,
     ClientEndpointFactory,
     NetLocParseError,
+    _SSL_SUPPORTED,
 )
-import tests # pylint: disable=unused-import
+import test  # noqa: F401; pylint: disable=unused-import
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = ()
 
 _LOGGER = logging.getLogger(__name__)
 
-_TWISTED_15_5 = t_versions.Version('twisted', 15, 5, 0)
+# ---- Classes -----------------------------------------------------------
 
-#---- Classes ------------------------------------------------------------
-
-#=========================================================================
+# ========================================================================
 class BaseUrlTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -68,42 +58,24 @@ class BaseUrlTestCase(t_unittest.TestCase):
     def tearDown(self):
         super().tearDown()
 
-    @unittest.skipIf(sys.version_info >= ( 3, 0 ) and twisted.version < _TWISTED_15_5, 'URLPath is not bytes friendly; see <https://twistedmatrix.com/trac/ticket/7994>')
     def test_child(self):
         base = BaseUrl.fromBytes(b'http://localhost/~xyz?foo=bar')
         sub = base.child(b'')
         self.assertIs(type(sub), BaseUrl)
+        self.assertEqual(sub.path, b'/%7Exyz/')
 
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(sub.path, b'~xyz/')
-        else:
-            self.assertEqual(sub.path, b'%7Exyz/')
-
-        sub = base.child(b'/')
-        self.assertEqual(sub.path, b'/')
-
-        sub = base.child(b'/abc')
-        self.assertEqual(sub.path, b'/abc')
+        sub = base.child(b'abc')
+        self.assertEqual(sub.path, b'/%7Exyz/abc')
 
     def test_join(self):
         base = BaseUrl.fromBytes(b'http://localhost/~xyz?foo=bar')
-
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(base.path, b'/~xyz')
-        else:
-            self.assertEqual(base.path, b'/%7Exyz')
-
+        self.assertEqual(base.path, b'/%7Exyz')
         self.assertEqual(base.query, b'foo=bar')
 
         p = ( b'', )
         sub = base.join(*p)
         self.assertIs(type(sub), BaseUrl)
-
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(sub.path, b'/~xyz/')
-        else:
-            self.assertEqual(sub.path, b'/%7Exyz/')
-
+        self.assertEqual(sub.path, b'/%7Exyz/')
         self.assertEqual(sub.query, b'')
 
         subquery = base.joinquery(*p)
@@ -113,11 +85,7 @@ class BaseUrlTestCase(t_unittest.TestCase):
 
         p = ( b'', b'', b'' )
         sub = base.join(*p)
-
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(sub.path, b'/~xyz/')
-        else:
-            self.assertEqual(sub.path, b'/%7Exyz/')
+        self.assertEqual(sub.path, b'/%7Exyz/')
 
         subquery = base.joinquery(*p)
         self.assertEqual(subquery.path, sub.path)
@@ -125,11 +93,7 @@ class BaseUrlTestCase(t_unittest.TestCase):
 
         p = ( b'abc', )
         sub = base.join(*p)
-
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(sub.path, b'/~xyz/abc')
-        else:
-            self.assertEqual(sub.path, b'/%7Exyz/abc')
+        self.assertEqual(sub.path, b'/%7Exyz/abc')
 
         subquery = base.joinquery(*p)
         self.assertEqual(subquery.path, sub.path)
@@ -137,11 +101,7 @@ class BaseUrlTestCase(t_unittest.TestCase):
 
         p = ( b'abc', b'' )
         sub = base.join(*p)
-
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(sub.path, b'/~xyz/abc/')
-        else:
-            self.assertEqual(sub.path, b'/%7Exyz/abc/')
+        self.assertEqual(sub.path, b'/%7Exyz/abc/')
 
         subquery = base.joinquery(*p)
         self.assertEqual(subquery.path, sub.path)
@@ -149,11 +109,7 @@ class BaseUrlTestCase(t_unittest.TestCase):
 
         p = ( b'abc', b'', b'', b'' )
         sub = base.join(*p)
-
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(sub.path, b'/~xyz/abc/')
-        else:
-            self.assertEqual(sub.path, b'/%7Exyz/abc/')
+        self.assertEqual(sub.path, b'/%7Exyz/abc/')
 
         subquery = base.joinquery(*p)
         self.assertEqual(subquery.path, sub.path)
@@ -161,11 +117,7 @@ class BaseUrlTestCase(t_unittest.TestCase):
 
         p = ( b'abc', b'', b'', b'', b'def' )
         sub = base.join(*p)
-
-        if twisted.version < _TWISTED_15_5:
-            self.assertEqual(sub.path, b'/~xyz/abc/def')
-        else:
-            self.assertEqual(sub.path, b'/%7Exyz/abc/def')
+        self.assertEqual(sub.path, b'/%7Exyz/abc/def')
 
         subquery = base.joinquery(*p)
         self.assertEqual(subquery.path, sub.path)
@@ -236,7 +188,7 @@ class BaseUrlTestCase(t_unittest.TestCase):
         sub = base.asscheme(b'https')
         self.assertIs(type(sub), BaseUrl)
         self.assertEqual(sub.scheme, b'https')
-        self.assertEqual(sub.__str__(), b'https://localhost/~xyz')
+        self.assertEqual(sub.__str__(), 'https://localhost/%7Exyz')
 
     def test_uri(self):
         url_bytes = b'http://localhost/cgi-bin/test?key=val#name'
@@ -245,12 +197,12 @@ class BaseUrlTestCase(t_unittest.TestCase):
         self.assertEqual(base_url.unsplit(), url_bytes)
         self.assertEqual(base_url.toURI().toBytes(), uri.toBytes())
 
-#=========================================================================
+# ========================================================================
 class ClientEndpointFactoryTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -274,17 +226,17 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
         self.assertIsInstance(endpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint._port, 80) # pylint: disable=protected-access
+        self.assertEqual(endpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._port, 80)  # pylint: disable=protected-access
 
         url_bytes = b'http://tweets.socket.io:54321/engine.io/?EIO=3&transport=polling'
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
         self.assertIsInstance(endpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint._port, 54321) # pylint: disable=protected-access
+        self.assertEqual(endpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._port, 54321)  # pylint: disable=protected-access
 
-    @unittest.skipUnless(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL not available')
+    @unittest.skipUnless(_SSL_SUPPORTED, 'OpenSSL not available')
     def test_endpoint_for_https(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
@@ -292,20 +244,20 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url_bytes = b'https://tweets.socket.io/engine.io/?EIO=3&transport=polling'
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
-        self.assertIsInstance(endpoint, t_endpoints.TLSWrapperClientEndpoint)
-        self.assertIsInstance(endpoint.wrappedEndpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint.wrappedEndpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint.wrappedEndpoint._port, 443) # pylint: disable=protected-access
+        self.assertIsInstance(endpoint, t_endpoints._WrapperEndpoint)  # pylint: disable=protected-access
+        self.assertIsInstance(endpoint._wrappedEndpoint, t_endpoints.HostnameEndpoint)  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._port, 443)  # pylint: disable=protected-access
 
         url_bytes = b'https://tweets.socket.io:54321/engine.io/?EIO=3&transport=polling'
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
-        self.assertIsInstance(endpoint, t_endpoints.TLSWrapperClientEndpoint)
-        self.assertIsInstance(endpoint.wrappedEndpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint.wrappedEndpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint.wrappedEndpoint._port, 54321) # pylint: disable=protected-access
+        self.assertIsInstance(endpoint, t_endpoints._WrapperEndpoint)  # pylint: disable=protected-access
+        self.assertIsInstance(endpoint._wrappedEndpoint, t_endpoints.HostnameEndpoint)  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._port, 54321)  # pylint: disable=protected-access
 
-    @unittest.skipIf(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL is installed')
+    @unittest.skipIf(_SSL_SUPPORTED, 'OpenSSL is installed')
     def test_endpoint_for_no_https(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
@@ -314,7 +266,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url = BaseUrl.fromBytes(url_bytes)
         self.assertRaises(t_error.SchemeNotSupported, factory.endpointForURI, url)
 
-    @unittest.skipIf(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL is installed')
+    @unittest.skipIf(_SSL_SUPPORTED, 'OpenSSL is installed')
     def test_endpoint_for_no_wss(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
@@ -331,7 +283,7 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
         self.assertIsInstance(endpoint, t_endpoints.UNIXClientEndpoint)
-        self.assertEqual(endpoint._path.encode('utf_8'), b'./tests/node/http.sock') # pylint: disable=protected-access
+        self.assertEqual(endpoint._path.encode('utf_8'), b'./tests/node/http.sock')  # pylint: disable=protected-access
 
     def test_endpoint_for_ws(self):
         from twisted.internet import reactor
@@ -341,17 +293,17 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
         self.assertIsInstance(endpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint._port, 80) # pylint: disable=protected-access
+        self.assertEqual(endpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._port, 80)  # pylint: disable=protected-access
 
         url_bytes = b'ws://tweets.socket.io:12345/engine.io/?EIO=3&transport=polling'
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
         self.assertIsInstance(endpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint._port, 12345) # pylint: disable=protected-access
+        self.assertEqual(endpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._port, 12345)  # pylint: disable=protected-access
 
-    @unittest.skipUnless(hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'OpenSSL not available')
+    @unittest.skipUnless(_SSL_SUPPORTED, 'OpenSSL not available')
     def test_endpoint_for_wss(self):
         from twisted.internet import reactor
         factory = ClientEndpointFactory(reactor)
@@ -359,20 +311,21 @@ class ClientEndpointFactoryTestCase(t_unittest.TestCase):
         url_bytes = b'wss://tweets.socket.io/engine.io/?EIO=3&transport=polling'
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
-        self.assertIsInstance(endpoint, t_endpoints.TLSWrapperClientEndpoint)
-        self.assertIsInstance(endpoint.wrappedEndpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint.wrappedEndpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint.wrappedEndpoint._port, 443) # pylint: disable=protected-access
+        print(dir(endpoint))
+        self.assertIsInstance(endpoint, t_endpoints._WrapperEndpoint)  # pylint: disable=protected-access
+        self.assertIsInstance(endpoint._wrappedEndpoint, t_endpoints.HostnameEndpoint)  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._port, 443)  # pylint: disable=protected-access
 
         url_bytes = b'wss://tweets.socket.io:54321/engine.io/?EIO=3&transport=polling'
         url = BaseUrl.fromBytes(url_bytes)
         endpoint = factory.endpointForURI(url)
-        self.assertIsInstance(endpoint, t_endpoints.TLSWrapperClientEndpoint)
-        self.assertIsInstance(endpoint.wrappedEndpoint, t_endpoints.HostnameEndpoint)
-        self.assertEqual(endpoint.wrappedEndpoint._host, b'tweets.socket.io') # pylint: disable=protected-access
-        self.assertEqual(endpoint.wrappedEndpoint._port, 54321) # pylint: disable=protected-access
+        self.assertIsInstance(endpoint, t_endpoints._WrapperEndpoint)  # pylint: disable=protected-access
+        self.assertIsInstance(endpoint._wrappedEndpoint, t_endpoints.HostnameEndpoint)  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._hostText, 'tweets.socket.io')  # pylint: disable=protected-access
+        self.assertEqual(endpoint._wrappedEndpoint._port, 54321)  # pylint: disable=protected-access
 
-#---- Initialization -----------------------------------------------------
+# ---- Initialization ----------------------------------------------------
 
 if __name__ == '__main__':
     from unittest import main

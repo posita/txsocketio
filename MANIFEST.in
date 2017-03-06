@@ -9,5 +9,16 @@
 # software in any capacity.
 # ========================================================================
 
-node-daemon.*
-package.json
+include \
+    CREDITS \
+    LICENSE \
+    docs/CREDITS.rst \
+    docs/LICENSE.rst \
+    docs/checkmodified.sh \
+    docs/conf.py \
+    docs/contrib.rst \
+    docs/index.rst \
+    docs/intro.rst \
+    docs/release_checklist.md \
+    docs/requirements.txt \
+    test/requirements.txt

@@ -1,4 +1,5 @@
-# -*- encoding: utf-8 -*-
+#!/usr/bin/env sh
+# -*- encoding: utf-8; grammar-ext: sh; mode: shell-script -*-
 
 # ========================================================================
 # Copyright and other protections apply. Please see the accompanying
@@ -9,5 +10,9 @@
 # software in any capacity.
 # ========================================================================
 
-node-daemon.*
-package.json
+_PARENT_DIR="$( cd "$( dirname "${0}" )" && pwd )/.."
+set -ex
+[ -d "${_PARENT_DIR}" ]
+[ "${_PARENT_DIR}/docs/checkmodified.sh" -ef "${0}" ]
+cd "${_PARENT_DIR}"
+test -z "$( git ls-files --other --exclude-from .gitignore docs )"
