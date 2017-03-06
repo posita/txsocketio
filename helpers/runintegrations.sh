@@ -1,48 +1,41 @@
 #!/usr/bin/env sh
-#-*- encoding: utf-8; mode: sh; grammar-ext: sh -*-
+# -*- encoding: utf-8; grammar-ext: sh; mode: shell-script -*-
 
-#=========================================================================
-# Copyright (c) 2015 Matt Bogosian <mtb19@columbia.edu>.
-#
-# Please see the accompanying LICENSE (or LICENSE.txt) file for rights and
-# restrictions governing use of this software. All rights not expressly
-# waived or licensed are reserved. If such a file did not accompany this
-# software, then please contact the author before viewing or using this
+# =======================================================================
+# Copyright and other protections apply. Please see the accompanying
+# ``LICENSE`` and ``CREDITS`` files for rights and restrictions governing
+# use of this software. All rights not expressly waived or licensed are
+# reserved. If those files are missing or appear to be modified from their
+# originals, then please contact the author before viewing or using this
 # software in any capacity.
-#=========================================================================
+# ========================================================================
 
-_MY_DIR="$( cd "$( dirname "${0}" )" && pwd )"
+_REPO_DIR="$( cd "$( dirname "${0}" )" && pwd )/.."
 set -e
-[ -d "${_MY_DIR}" ]
-[ "${_MY_DIR}/runintegrations.sh" -ef "${0}" ]
-cd "${_MY_DIR}"
+[ -d "${_REPO_DIR}" ]
+[ "${_REPO_DIR}/helpers/runintegrations.sh" -ef "${0}" ]
+cd "${_REPO_DIR}"
 
 if [ -n "${CLEAN}" ] ; then
-    rm -frv "${_MY_DIR}/integrations/node/node_modules"
+    rm -frv "${_REPO_DIR}/integration/node/node_modules"
 fi
 
-TOX_ENV="${TOX_ENV:-check}"
-COVERAGE="${_MY_DIR}/.tox/${TOX_ENV}/bin/coverage"
-
-[ -x "${COVERAGE}" ] \
-    || tox -e "${TOX_ENV}"
-
-[ -x "${_MY_DIR}/integrations/node/node_modules/.bin/node-daemon" ] \
+[ -x "${_REPO_DIR}/integration/node/node_modules/.bin/node-daemon" ] \
     || (
             set -x
-            cd "${_MY_DIR}/integrations/node"
+            cd "${_REPO_DIR}/integration/node"
             npm install
         )
 
 _SOCK=./node-daemon.sock
 
 rm -fv \
-        "${_MY_DIR}/integrations/node/node-daemon.err" \
-        "${_MY_DIR}/integrations/node/node-daemon.log"
+        "${_REPO_DIR}/integration/node/node-daemon.err" \
+        "${_REPO_DIR}/integration/node/node-daemon.log"
 
 (
     set -x
-    cd "${_MY_DIR}/integrations/node"
+    cd "${_REPO_DIR}/integration/node"
     DEBUG='*' ./node_modules/.bin/node-daemon --socket "${_SOCK}" --worker server.js --workers 1
 )
 
@@ -53,7 +46,7 @@ _retval="${?}"
 
 (
     set -x
-    cd "${_MY_DIR}/integrations/node"
+    cd "${_REPO_DIR}/integration/node"
     _remaining=10
 
     while ! curl >/dev/null --max-time 1 --silent --unix-socket ./http.sock 'http:/engine.io/' ; do
@@ -62,7 +55,7 @@ _retval="${?}"
         if [ "${_remaining}" -le 0 ] ; then
             curl --version
             (
-                cd "${_MY_DIR}/integrations/node"
+                cd "${_REPO_DIR}/integration/node"
                 grep -n '' *.log
             )
             break
@@ -77,7 +70,7 @@ _retval="${?}"
 
 if [ "${_retval}" -ne 0 ] ; then
     (
-        cd "${_MY_DIR}/integrations/node"
+        cd "${_REPO_DIR}/integration/node"
         ./node_modules/.bin/node-daemon-ctl --socket "${_SOCK}" stop
     )
 
@@ -88,9 +81,9 @@ set +e
 
 _num_failed=0
 
-for t in $( find "${_MY_DIR}/integrations/scripts" -type f -perm +100 -o -name \*.py ) ; do
+for t in $( find "${_REPO_DIR}/integration/scripts" -type f -perm +100 -o -name \*.py ) ; do
     if [ "${t%.py}x" != "${t}x" ] ; then
-        ( set -x ; "${_MY_DIR}/.tox/check/bin/coverage" run --append "${t}" )
+        ( set -x ; coverage run --append "${t}" )
     else
         ( set -x ; "${t}" )
     fi
@@ -103,12 +96,12 @@ for t in $( find "${_MY_DIR}/integrations/scripts" -type f -perm +100 -o -name \
     fi
 done
 
-( set -x ; "${COVERAGE}" run --append -m unittest discover --pattern 'integration_*.py' --verbose ) \
+( set -x ; coverage run --append -m unittest discover --pattern 'integration_*.py' --verbose ) \
     || _num_failed="$(( _num_failed + 1 ))"
 
 (
     set -x
-    cd "${_MY_DIR}/integrations/node"
+    cd "${_REPO_DIR}/integration/node"
     _remaining=30
 
     while [ -S "${_SOCK}" ] ; do

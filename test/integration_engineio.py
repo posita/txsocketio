@@ -1,32 +1,26 @@
 #!/usr/bin/env python
-#-*- encoding: utf-8; grammar-ext: py; mode: python -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.moves.urllib import parse as url_parse
 from future.utils import itervalues
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import logging
 from twisted.internet import (
@@ -53,29 +47,29 @@ from txsocketio.engineio import (
     TransportContext,
     TransportStateError,
 )
-import tests # pylint: disable=unused-import
-from tests.symmetries import mock
+import test  # noqa: F401; pylint: disable=unused-import
+from test.symmetries import mock
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = ()
 
 _LOGGER = logging.getLogger(__name__)
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class BaseIntegrationTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
-        self.url = BaseUrl.fromString(b'unix://<sockpath>/<path>')
+        self.url = BaseUrl.fromString('unix://<sockpath>/<path>')
         sockpath = './integrations/node/http.sock'
-        self.url.netloc = url_parse.quote(sockpath.encode('utf_8'), safe=b'').encode('ascii')
+        self.url.netloc = url_parse.quote(sockpath)
         self.close_d = t_defer.Deferred()
 
         def _close_handler(event):
@@ -88,7 +82,7 @@ class BaseIntegrationTestCase(t_unittest.TestCase):
     def tearDown(self):
         super().tearDown()
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def registermock(self, dispatcher):
         handler = mock.Mock(return_value=None)
@@ -98,10 +92,10 @@ class BaseIntegrationTestCase(t_unittest.TestCase):
 
         return handler
 
-#=========================================================================
+# ========================================================================
 class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -115,7 +109,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_close_packet_after_upgrade_to_self(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         tc = TransportContext(self.url)
         connect_d = self.transport.connect(tc)
         self.assertIn(self.transport.state, ( TRANSPORT_STATE_CONNECTING, TRANSPORT_STATE_CONNECTED ))
@@ -149,7 +143,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_close_packet_before_upgrade_to_self(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         tc = TransportContext(self.url)
         connect_d = self.transport.connect(tc)
         self.assertIn(self.transport.state, ( TRANSPORT_STATE_CONNECTING, TRANSPORT_STATE_CONNECTED ))
@@ -192,7 +186,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_disconnect_after_connected(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         tc = TransportContext(self.url)
 
         connect_d = self.transport.connect(tc)
@@ -216,7 +210,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_disconnect_after_upgrade_to_self(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         tc = TransportContext(self.url)
 
         connect_d = self.transport.connect(tc)
@@ -255,7 +249,7 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_disconnect_before_connected(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         tc = TransportContext(self.url)
 
         connect_d = self.transport.connect(tc)
@@ -278,10 +272,10 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
         yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
 
-#=========================================================================
+# ========================================================================
 class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -291,7 +285,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_close_packet_after_started(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         engineio, handler = self._mkengineio()
 
         yield engineio.start()
@@ -303,7 +297,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
-        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+        self.assertIsNone(engineio._transport_context.session_id)  # pylint: disable=protected-access
 
         call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
 
@@ -317,10 +311,10 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_close_packet_after_started_delay(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         engineio, handler = self._mkengineio()
 
-        def _sendclose(event): # pylint: disable=unused-argument
+        def _sendclose(event):  # pylint: disable=unused-argument
             reactor.callLater(1, engineio.sendeiopacket, EIO_TYPE_CLOSE)
 
         engineio.register('open', _sendclose)
@@ -331,7 +325,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
-        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+        self.assertIsNone(engineio._transport_context.session_id)  # pylint: disable=protected-access
 
         call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
 
@@ -345,7 +339,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_hello(self):
-        self.url.path = b'/hello/engine.io/'
+        self.url.path = '/hello/engine.io/'
         engineio, handler = self._mkengineio()
 
         yield engineio.start()
@@ -354,7 +348,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
-        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+        self.assertIsNone(engineio._transport_context.session_id)  # pylint: disable=protected-access
 
         call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
 
@@ -368,7 +362,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_hello_delay(self):
-        self.url.path = b'/hello_delay/engine.io/'
+        self.url.path = '/hello_delay/engine.io/'
         engineio, handler = self._mkengineio()
 
         yield engineio.start()
@@ -377,7 +371,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
-        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+        self.assertIsNone(engineio._transport_context.session_id)  # pylint: disable=protected-access
 
         call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
 
@@ -391,7 +385,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_no_deadlock(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         engineio, handler = self._mkengineio()
 
         yield engineio.start()
@@ -409,7 +403,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
-        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+        self.assertIsNone(engineio._transport_context.session_id)  # pylint: disable=protected-access
 
         call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
 
@@ -421,7 +415,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
     @t_defer.inlineCallbacks
     def test_stop_after_started(self):
-        self.url.path = b'/client_close/engine.io/'
+        self.url.path = '/client_close/engine.io/'
         engineio, handler = self._mkengineio()
 
         yield engineio.start()
@@ -433,7 +427,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
         yield txrc.deferredtimeout(reactor, 10, self.close_d)
         self.assertTrue(self.close_d.called)
         self.assertFalse(engineio.running)
-        self.assertIsNone(engineio._transport_context.session_id) # pylint: disable=protected-access
+        self.assertIsNone(engineio._transport_context.session_id)  # pylint: disable=protected-access
 
         call_args_list = [ i for i in handler.call_args_list if i[0][0] not in ( 'noop', 'pong' ) ]
 
@@ -443,7 +437,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
         self.assertEqual(call_args_list[0], expected[0])
 
-    #---- Private static methods -----------------------------------------
+    # ---- Private static methods ----------------------------------------
 
     def _mkengineio(self):
         url_bytes = self.url.unsplit()
@@ -453,7 +447,7 @@ class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
         return engineio, handler
 
-#---- Initialization -----------------------------------------------------
+# ---- Initialization ----------------------------------------------------
 
 if __name__ == '__main__':
     from unittest import main

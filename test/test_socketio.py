@@ -1,30 +1,24 @@
 #!/usr/bin/env python
-#-*- encoding: utf-8; grammar-ext: py; mode: python -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import logging
 import string
@@ -44,9 +38,9 @@ from txsocketio.socketio import (
     decsiopacket,
     encsiopacket,
 )
-import tests # pylint: disable=unused-import
+import test  # noqa: F401; pylint: disable=unused-import
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = ()
 
@@ -60,14 +54,14 @@ _LOGGER = logging.getLogger(__name__)
 _JSON_CHILDREN = strategies.recursive(strategies.decimals().filter(lambda x: not x.is_nan()) | strategies.booleans() | strategies.text() | strategies.none(), lambda children: strategies.lists(children) | strategies.dictionaries(strategies.text(), children), max_leaves=5)
 _JSON = strategies.one_of(strategies.booleans(), strategies.text(), strategies.lists(_JSON_CHILDREN), strategies.dictionaries(strategies.text(), _JSON_CHILDREN))
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class PacketsTestCase(t_unittest.TestCase):
 
     longMessage = True
 
-    #---- Public constants -----------------------------------------------
+    # ---- Public constants ----------------------------------------------
 
     BAD_TRUNC_PACKET = ''
     BAD_TYPE = bytes(b'\x2a')
@@ -75,7 +69,7 @@ class PacketsTestCase(t_unittest.TestCase):
     BAD_PACKET_STR_BIN_ACK = SIO_TYPE_BIN_ACK.decode('utf_8')
     BAD_PACKET_STR_BIN_EVENT = SIO_TYPE_BIN_EVENT.decode('utf_8')
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -83,7 +77,7 @@ class PacketsTestCase(t_unittest.TestCase):
     def tearDown(self):
         super().tearDown()
 
-    @hypothesis.given(packet_type=strategies.sampled_from(set(SIO_TYPE_NAMES_BY_CODE).difference(( SIO_TYPE_BIN_EVENT, SIO_TYPE_BIN_ACK ))), packet_obj=_JSON | strategies.just(''), packet_path=strategies.text(alphabet=string.digits + string.letters + '/'), packet_id=strategies.integers(min_value=0) | strategies.none())
+    @hypothesis.given(packet_type=strategies.sampled_from(set(SIO_TYPE_NAMES_BY_CODE).difference(( SIO_TYPE_BIN_EVENT, SIO_TYPE_BIN_ACK ))), packet_obj=_JSON | strategies.just(''), packet_path=strategies.text(alphabet=string.digits + string.ascii_letters + '/'), packet_id=strategies.integers(min_value=0) | strategies.none())
     @hypothesis.example(packet_type=SIO_TYPE_EVENT, packet_obj='', packet_path='/', packet_id=None)
     @hypothesis.example(packet_type=SIO_TYPE_EVENT, packet_obj='', packet_path='/', packet_id=0)
     def test_enc_dec(self, packet_type, packet_obj, packet_path, packet_id):
@@ -94,11 +88,11 @@ class PacketsTestCase(t_unittest.TestCase):
     def test_packet_dec(self):
         packets = (
             encsiopacket(SIO_TYPE_EVENT, None, None, None),
-            encsiopacket(SIO_TYPE_EVENT, '',   None, None),
-            encsiopacket(SIO_TYPE_EVENT, None, '',   None),
-            encsiopacket(SIO_TYPE_EVENT, '',   '',   None),
-            encsiopacket(SIO_TYPE_EVENT, None, '/',  None),
-            encsiopacket(SIO_TYPE_EVENT, '',   '/',  None),
+            encsiopacket(SIO_TYPE_EVENT, '', None, None),
+            encsiopacket(SIO_TYPE_EVENT, None, '', None),
+            encsiopacket(SIO_TYPE_EVENT, '', '', None),
+            encsiopacket(SIO_TYPE_EVENT, None, '/', None),
+            encsiopacket(SIO_TYPE_EVENT, '', '/', None),
             SIO_TYPE_EVENT.decode('utf_8'),
         )
 
@@ -168,7 +162,7 @@ class PacketsTestCase(t_unittest.TestCase):
             with self.assertRaisesRegex(PayloadEncodeError, r'^unrecognized packet type "', msg='packet_type_data[{}]: {!r}'.format(i, packet_type_data)):
                 encsiopacket(*packet_type_data)
 
-#---- Initialization -----------------------------------------------------
+# ---- Initialization ----------------------------------------------------
 
 if __name__ == '__main__':
     from unittest import main

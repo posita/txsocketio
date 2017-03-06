@@ -1,31 +1,25 @@
 #!/usr/bin/env python
-#-*- encoding: utf-8; grammar-ext: py; mode: python -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.utils import itervalues
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import decimal
 import logging
@@ -42,22 +36,22 @@ from txsocketio.socketio import (
     SIO_TYPE_NAMES_BY_CODE,
     SocketIo,
 )
-import tests # pylint: disable=unused-import
-from tests.integration_engineio import BaseIntegrationTestCase
-from tests.symmetries import mock
+import test  # noqa: F401; pylint: disable=unused-import
+from test.integration_engineio import BaseIntegrationTestCase
+from test.symmetries import mock
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = ()
 
 _LOGGER = logging.getLogger(__name__)
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class SocketIoBaseIntegrationTestCase(BaseIntegrationTestCase):
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     def setUp(self):
         super().setUp()
@@ -65,7 +59,7 @@ class SocketIoBaseIntegrationTestCase(BaseIntegrationTestCase):
     def tearDown(self):
         super().tearDown()
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def registermock(self, dispatcher):
         handler = super().registermock(dispatcher)
@@ -75,7 +69,7 @@ class SocketIoBaseIntegrationTestCase(BaseIntegrationTestCase):
 
         return handler
 
-    #---- Private static methods -----------------------------------------
+    # ---- Private static methods ----------------------------------------
 
     def _mksocketio(self, url_bytes=None):
         url_bytes = self.url.unsplit() if url_bytes is None else url_bytes
@@ -85,10 +79,10 @@ class SocketIoBaseIntegrationTestCase(BaseIntegrationTestCase):
 
         return socketio, handler
 
-#=========================================================================
+# ========================================================================
 class SocketIoIntegrationTestCase(SocketIoBaseIntegrationTestCase):
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     @t_defer.inlineCallbacks
     def test_echo_ack(self):
@@ -124,12 +118,12 @@ class SocketIoIntegrationTestCase(SocketIoBaseIntegrationTestCase):
         self.assertIn(mock.call('ack', '/', []), handler.call_args_list)
         self.assertIn(mock.call('close'), handler.call_args_list)
 
-#=========================================================================
+# ========================================================================
 class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
 
     timeout = 600
 
-    #---- Public hooks ---------------------------------------------------
+    # ---- Public hooks --------------------------------------------------
 
     @unittest.skipUnless(os.environ.get('TEST_INSIGHT') and hasattr(t_endpoints, 'TLSWrapperClientEndpoint'), 'TEST_INSIGHT not set or OpenSSL not available')
     @t_defer.inlineCallbacks
@@ -151,7 +145,8 @@ class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
 
         if len(txs) == 0:
             try:
-                import debug # TODO pylint: disable=reimported,unused-variable,useless-suppression
+                # TODO - fix this
+                import debug  # noqa: F401; pylint: disable=reimported,unused-variable,useless-suppression
             except ImportError:
                 self.assertGreater(len(txs), 0)
 
@@ -161,7 +156,7 @@ class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
             self.assertGreater(len(tx.get('vout', ())), 0)
             self.assertRegexpMatches(tx.get('txid', ''), r'^[0-9A-Fa-f]{64}$')
 
-#---- Initialization -----------------------------------------------------
+# ---- Initialization ----------------------------------------------------
 
 if __name__ == '__main__':
     from unittest import main

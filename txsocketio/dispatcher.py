@@ -1,29 +1,23 @@
-#-*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: txsocketio.test_dispatcher -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: test.test_dispatcher -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
 """
-#=========================================================================
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import collections
 import logging
@@ -31,7 +25,7 @@ import os
 from twisted.internet import defer as t_defer
 from twisted.python import failure as t_failure
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = (
     'Dispatcher',
@@ -39,9 +33,9 @@ __all__ = (
 
 _LOGGER = logging.getLogger(__name__)
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class Dispatcher(object):
     """
     An event dispatcher. Event handlers are callbacks with the signature:
@@ -63,13 +57,13 @@ class Dispatcher(object):
         which callbacks can be registered
     """
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self, events=()):
         self._events = frozenset(events)
         self._callbacks = dict(( ( e, collections.deque() ) for e in self._events ))
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def deferredon(self, event):
         """
@@ -95,9 +89,11 @@ class Dispatcher(object):
             >>> d.dispatch('event')
         """
         d = t_defer.Deferred()
-        callback = lambda event, *args, **kw: d.callback(( event, args, kw ))
 
-        if not self.register(event, callback, once=True):
+        def _callback(event, *args, **kw):
+            return d.callback(( event, args, kw ))
+
+        if not self.register(event, _callback, once=True):
             raise ValueError('unable to register callback for {!r}'.format(event))
 
         return d
@@ -128,7 +124,7 @@ class Dispatcher(object):
 
                 if isinstance(retval, t_defer.Deferred):
                     retval.addErrback(self._logerror, 'failure raised from deferred event callback {!r} (ignored)'.format(callback))
-            except Exception as exc: # pylint: disable=broad-except
+            except Exception as exc:  # pylint: disable=broad-except
                 self._logerror(exc, 'exception raised from event callback {!r} (ignored)'.format(callback))
 
     def on(self, event, callback):
@@ -245,7 +241,7 @@ class Dispatcher(object):
 
         return True
 
-    #---- Private methods ------------------------------------------------
+    # ---- Private methods -----------------------------------------------
 
     def _logerror(self, e, msg=''):
         if isinstance(e, t_failure.Failure):

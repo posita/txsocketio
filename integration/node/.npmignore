@@ -1,6 +1,6 @@
-# -*- encoding: utf-8; mode: ini -*-
+# -*- encoding: utf-8 -*-
 
-# =======================================================================
+# ========================================================================
 # Copyright and other protections apply. Please see the accompanying
 # ``LICENSE`` and ``CREDITS`` files for rights and restrictions governing
 # use of this software. All rights not expressly waived or licensed are
@@ -9,16 +9,5 @@
 # software in any capacity.
 # ========================================================================
 
-[run]  # -----------------------------------------------------------------
-
-omit =
-    .eggs/*
-    .hypothesis/*
-    .tox/*
-    *.c
-    */distutils/*
-    */lib_pypy/*
-    */site-packages/*
-    integrations/*
-    tests/*
-    txsocketio/tls.py
+node-daemon.*
+package.json

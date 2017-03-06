@@ -1,16 +1,15 @@
 //-*- encoding: utf-8; grammar-ext: js; mode: js -*-
 
 /*======================================================================*\
-  Copyright (c) 2015 Matt Bogosian <mtb19@columbia.edu>.
-
-  Please see the accompanying LICENSE (or LICENSE.txt) file for rights and
-  restrictions governing use of this software. All rights not expressly
-  waived or licensed are reserved. If such a file did not accompany this
-  software, then please contact the author before viewing or using this
+  Copyright and other protections apply. Please see the accompanying
+  ``LICENSE`` and ``CREDITS`` files for rights and restrictions governing
+  use of this software. All rights not expressly waived or licensed are
+  reserved. If those files are missing or appear to be modified from their
+  originals, then please contact the author before viewing or using this
   software in any capacity.
 \*======================================================================*/
 
-//---- Imports -----------------------------------------------------------
+// ---- Imports ----------------------------------------------------------
 
 var http = require('http');
 var path = require('path');
@@ -18,7 +17,7 @@ var path = require('path');
 var engine_io = require('engine.io');
 var socket_io = require('socket.io');
 
-//---- Initialization ----------------------------------------------------
+// ---- Initialization ---------------------------------------------------
 
 require('console-stamp')(console, { pattern: 'HH:MM:ss.l' });
 var app = http.createServer();

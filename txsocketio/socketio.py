@@ -1,31 +1,25 @@
-#-*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: txsocketio.test_socketio -*-
+# -*- encoding: utf-8; grammar-ext: py; mode: python; test-case-name: test.test_socketio -*-
 
-#=========================================================================
+# ========================================================================
 """
-  Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-  .. |(c)| unicode:: u+a9
-  .. _`Matt Bogosian`: mailto:mtb19@columbia.edu
-  .. |@posita| replace:: **@posita**
-  .. _`@posita`: https://github.com/posita
-
-  Please see the accompanying ``LICENSE`` (or ``LICENSE.txt``) file for
-  rights and restrictions governing use of this software. All rights not
-  expressly waived or licensed are reserved. If such a file did not
-  accompany this software, then please contact the author before viewing
-  or using this software in any capacity.
-"""
-#=========================================================================
+Copyright and other protections apply. Please see the accompanying
+:doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights
+and restrictions governing use of this software. All rights not expressly
+waived or licensed are reserved. If those files are missing or appear to
+be modified from their originals, then please contact the author before
+viewing or using this software in any capacity.
+``"""
+# ========================================================================
 
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import * # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.utils import iteritems
 from future.utils import iterkeys
 
-#---- Imports ------------------------------------------------------------
+# ---- Imports -----------------------------------------------------------
 
 import logging
 import re
@@ -40,7 +34,7 @@ from .engineio import (
     jsonloads,
 )
 
-#---- Constants ----------------------------------------------------------
+# ---- Constants ---------------------------------------------------------
 
 __all__ = (
     'SIO_TYPE_ACK',
@@ -55,22 +49,22 @@ __all__ = (
     'SocketIo',
 )
 
-SIO_TYPE_CONNECT    = bytes(b'0')
+SIO_TYPE_CONNECT = bytes(b'0')
 SIO_TYPE_DISCONNECT = bytes(b'1')
-SIO_TYPE_EVENT      = bytes(b'2')
-SIO_TYPE_ACK        = bytes(b'3')
-SIO_TYPE_ERROR      = bytes(b'4')
-SIO_TYPE_BIN_EVENT  = bytes(b'5')
-SIO_TYPE_BIN_ACK    = bytes(b'6')
+SIO_TYPE_EVENT = bytes(b'2')
+SIO_TYPE_ACK = bytes(b'3')
+SIO_TYPE_ERROR = bytes(b'4')
+SIO_TYPE_BIN_EVENT = bytes(b'5')
+SIO_TYPE_BIN_ACK = bytes(b'6')
 
 SIO_TYPE_NAMES_BY_CODE = {
-    SIO_TYPE_CONNECT:    'connect',
+    SIO_TYPE_CONNECT: 'connect',
     SIO_TYPE_DISCONNECT: 'disconnect',
-    SIO_TYPE_EVENT:      'event',
-    SIO_TYPE_ACK:        'ack',
-    SIO_TYPE_ERROR:      'error',
-    SIO_TYPE_BIN_EVENT:  'binary_event',
-    SIO_TYPE_BIN_ACK:    'binary_ack',
+    SIO_TYPE_EVENT: 'event',
+    SIO_TYPE_ACK: 'ack',
+    SIO_TYPE_ERROR: 'error',
+    SIO_TYPE_BIN_EVENT: 'binary_event',
+    SIO_TYPE_BIN_ACK: 'binary_ack',
 }
 
 SIO_TYPE_CODES_BY_NAME = dict(( ( v, k ) for k, v in iteritems(SIO_TYPE_NAMES_BY_CODE) ))
@@ -91,9 +85,9 @@ _PACKET_RE_FLAGS = re.DOTALL | re.VERBOSE
 
 _LOGGER = logging.getLogger(__name__)
 
-#---- Classes ------------------------------------------------------------
+# ---- Classes -----------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 class SocketIo(EngineIo):
     """
     Abstracts an Socket.IO connection, handling any underlying transport
@@ -103,14 +97,14 @@ class SocketIo(EngineIo):
     Arguments are the same as with :class:`EngineIo`.
     """
 
-    #---- Constructor ----------------------------------------------------
+    # ---- Constructor ---------------------------------------------------
 
     def __init__(self, base_url, transport_factories=None, reactor=None):
         super().__init__(base_url, transport_factories, reactor)
         self._ack_serial = 1
         self.register(EIO_TYPE_NAMES_BY_CODE[EIO_TYPE_MESSAGE], self._onmessage)
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def connect(self, path):
         """
@@ -201,7 +195,7 @@ class SocketIo(EngineIo):
 
         return self.sendeiopacket(EIO_TYPE_MESSAGE, encsiopacket(packet_type, packet_obj, packet_path, ack_serial))
 
-    #---- Public methods -------------------------------------------------
+    # ---- Public methods ------------------------------------------------
 
     def _onmessage(self, _, payload):
         packet_type, packet_obj, packet_path, packet_id = decsiopacket(payload)
@@ -213,9 +207,9 @@ class SocketIo(EngineIo):
             ack_id_event = '{}-{}'.format(SIO_TYPE_NAMES_BY_CODE[packet_type], packet_id)
             self.dispatch(ack_id_event, packet_path, packet_obj)
 
-#---- Functions ----------------------------------------------------------
+# ---- Functions ---------------------------------------------------------
 
-#=========================================================================
+# ========================================================================
 def decsiopacket(packet):
     """
     Decodes a single Socket.IO packet. String packets are returned as
@@ -284,7 +278,7 @@ def decsiopacket(packet):
 
     return packet_type, packet_obj, packet_path, packet_id
 
-#=========================================================================
+# ========================================================================
 def encsiopacket(packet_type, packet_obj, packet_path='/', packet_id=None):
     """
     Encodes a single Socket.IO packet.

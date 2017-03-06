@@ -10,21 +10,10 @@
     :maxdepth: 3
     :hidden:
 
-Copyright |(c)| 2015 `Matt Bogosian`_ (|@posita|_).
-
-.. |(c)| unicode:: u+a9
-.. _`Matt Bogosian`: mailto:mtb19@columbia.edu?Subject=txsocketio
-.. |@posita| replace:: **@posita**
-.. _`@posita`: https://github.com/posita
-
-Please see the accompanying |LICENSE|_ (or |LICENSE.txt|_) file for rights and restrictions governing use of this software.
+Copyright and other protections apply.
+Please see the accompanying :doc:`LICENSE <LICENSE>` and :doc:`CREDITS <CREDITS>` file(s) for rights and restrictions governing use of this software.
 All rights not expressly waived or licensed are reserved.
-If such a file did not accompany this software, then please contact the author before viewing or using this software in any capacity.
-
-.. |LICENSE| replace:: ``LICENSE``
-.. _`LICENSE`: _sources/LICENSE.txt
-.. |LICENSE.txt| replace:: ``LICENSE.txt``
-.. _`LICENSE.txt`: _sources/LICENSE.txt
+If those files are missing or appear to be modified from their originals, then please contact the author before viewing or using this software in any capacity.
 
 Introduction
 ============
@@ -38,6 +27,7 @@ License
 -------
 
 ``txsocketio`` is licensed under the `MIT License <https://opensource.org/licenses/MIT>`_.
+See the :doc:`LICENSE <LICENSE>` file for details.
 Source code is `available on GitHub <https://github.com/posita/txsocketio>`__.
 
 Installation
@@ -45,14 +35,14 @@ Installation
 
 Installation can be performed via ``pip`` (which will download and install the `latest release <https://pypi.python.org/pypi/txsocketio/>`__):
 
-.. code-block:: sh
+.. code-block:: console
 
     % pip install txsocketio
     ...
 
 Alternately, you can download the sources (e.g., `from GitHub <https://github.com/posita/txsocketio>`__) and run ``setup.py``:
 
-.. code-block:: sh
+.. code-block:: console
 
     % git clone https://github.com/posita/txsocketio
     ...
@@ -75,22 +65,19 @@ Python 2.6 will *not* work.
 
 ``txsocketio`` has the following dependencies (which will be installed automatically):
 
+*   |Twisted|_
 *   |autobahn|_
-
 *   |future|_
-
 *   |mock|_ (for Python 2.7)
 
-*   |twisted|_
-
+.. |Twisted| replace:: ``Twisted``
+.. _`Twisted`: https://twistedmatrix.com/
 .. |autobahn| replace:: ``autobahn``
 .. _`autobahn`: http://autobahn.ws/python/
 .. |future| replace:: ``future``
 .. _`future`: http://python-future.org/
 .. |mock| replace:: ``mock``
 .. _`mock`: https://github.com/testing-cabal/mock
-.. |twisted| replace:: ``twisted``
-.. _`twisted`: https://twistedmatrix.com/
 
 Motivation
 ----------
