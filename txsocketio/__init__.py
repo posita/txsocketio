@@ -14,15 +14,15 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
 # ---- Imports -----------------------------------------------------------
 
 import logging as _logging
 
-from .engineio import *  # noqa: F401,F403; pylint: disable=wildcard-import
-from .socketio import *  # noqa: F401,F403; pylint: disable=wildcard-import
+from .engineio import *  # noqa: F401,F403 # pylint: disable=wildcard-import
+from .socketio import *  # noqa: F401,F403 # pylint: disable=wildcard-import
 from .version import __version__  # noqa: F401
 
 # ---- Constants ---------------------------------------------------------

@@ -15,8 +15,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
 # ---- Imports -----------------------------------------------------------
 
@@ -38,7 +38,7 @@ from txsocketio.socketio import (
     decsiopacket,
     encsiopacket,
 )
-import test  # noqa: F401; pylint: disable=unused-import
+import test  # noqa: F401 # pylint: disable=unused-import
 
 # ---- Constants ---------------------------------------------------------
 
@@ -70,12 +70,6 @@ class PacketsTestCase(t_unittest.TestCase):
     BAD_PACKET_STR_BIN_EVENT = SIO_TYPE_BIN_EVENT.decode('utf_8')
 
     # ---- Public hooks --------------------------------------------------
-
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     @hypothesis.given(packet_type=strategies.sampled_from(set(SIO_TYPE_NAMES_BY_CODE).difference(( SIO_TYPE_BIN_EVENT, SIO_TYPE_BIN_ACK ))), packet_obj=_JSON | strategies.just(''), packet_path=strategies.text(alphabet=string.digits + string.ascii_letters + '/'), packet_id=strategies.integers(min_value=0) | strategies.none())
     @hypothesis.example(packet_type=SIO_TYPE_EVENT, packet_obj='', packet_path='/', packet_id=None)

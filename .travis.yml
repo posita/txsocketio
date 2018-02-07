@@ -14,7 +14,6 @@ language: python
 
 python:
     - "2.7"
-    - "3.3"
     - "3.4"
     - "3.5"
     - "3.6"
@@ -28,6 +27,10 @@ env:
     - TWISTED="16" SSL="yes"
     - TWISTED="17.1" SSL="no"
     - TWISTED="17.1" SSL="yes"
+    - TWISTED="17.5" SSL="no"
+    - TWISTED="17.5" SSL="yes"
+    - TWISTED="17.9" SSL="no"
+    - TWISTED="17.9" SSL="yes"
     - TWISTED="trunk" SSL="no"
     - TWISTED="trunk" SSL="yes"
 
@@ -36,9 +39,6 @@ install:
 
 matrix:
     allow_failures:
-        # 3.6 is experimental (needs pylint >= 2.0)
-        - python: "3.6"
-
         # PyPy w/ SSL is experimental
         - python: "pypy"
           env: TWISTED="16" SSL="yes"

@@ -15,8 +15,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.utils import itervalues
 
 # ---- Imports -----------------------------------------------------------
@@ -36,7 +36,7 @@ from txsocketio.socketio import (
     SIO_TYPE_NAMES_BY_CODE,
     SocketIo,
 )
-import test  # noqa: F401; pylint: disable=unused-import
+import test  # noqa: F401 # pylint: disable=unused-import
 from test.integration_engineio import BaseIntegrationTestCase
 from test.symmetries import mock
 
@@ -50,14 +50,6 @@ _LOGGER = logging.getLogger(__name__)
 
 # ========================================================================
 class SocketIoBaseIntegrationTestCase(BaseIntegrationTestCase):
-
-    # ---- Public hooks --------------------------------------------------
-
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     # ---- Public methods ------------------------------------------------
 
@@ -146,7 +138,7 @@ class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
         if len(txs) == 0:
             try:
                 # TODO - fix this
-                import debug  # noqa: F401; pylint: disable=reimported,unused-variable,useless-suppression
+                import debug  # noqa: F401 # pylint: disable=reimported,unused-variable,useless-suppression
             except ImportError:
                 self.assertGreater(len(txs), 0)
 
@@ -154,7 +146,7 @@ class InsightIntegrationTestCase(SocketIoIntegrationTestCase):
             self.assertIsInstance(tx.get('valueOut'), decimal.Decimal)
             self.assertGreater(tx.get('valueOut', 0), 0)
             self.assertGreater(len(tx.get('vout', ())), 0)
-            self.assertRegexpMatches(tx.get('txid', ''), r'^[0-9A-Fa-f]{64}$')
+            self.assertRegex(tx.get('txid', ''), r'^[0-9A-Fa-f]{64}$')
 
 # ---- Initialization ----------------------------------------------------
 

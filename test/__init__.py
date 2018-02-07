@@ -14,8 +14,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
 # ---- Imports -----------------------------------------------------------
 
@@ -45,13 +45,13 @@ _LOG_FMT = os.environ.get('LOG_FMT')
 # twisted.trial.unittest doesn't have; this monkey patch fixes all that
 # nonsense
 if not hasattr(t_unittest.TestCase, 'assertRaisesRegex'):
-    t_unittest.TestCase.assertRaisesRegex = t_unittest.TestCase.assertRaisesRegexp
+    setattr(t_unittest.TestCase, 'assertRaisesRegex', t_unittest.TestCase.assertRaisesRegexp)
 
 if not hasattr(t_unittest.TestCase, 'assertRegex'):
-    t_unittest.TestCase.assertRegex = t_unittest.TestCase.assertRegexpMatches
+    setattr(t_unittest.TestCase, 'assertRegex', t_unittest.TestCase.assertRegexpMatches)
 
 if not hasattr(t_unittest.TestCase, 'assertNotRegex'):
-    t_unittest.TestCase.assertNotRegex = t_unittest.TestCase.assertNotRegexpMatches
+    setattr(t_unittest.TestCase, 'assertNotRegex', t_unittest.TestCase.assertNotRegexpMatches)
 
 # TODO: add or condition once <https://tm.tl/#8110> is fixed
 if sys.version_info[0] <= 2:  # \

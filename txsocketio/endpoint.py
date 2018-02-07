@@ -14,8 +14,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.moves.urllib import parse as url_parse
 from future.utils import native
 
@@ -122,13 +122,13 @@ class BaseUrl(t_urlpath.URLPath):
     # ---- Public hooks --------------------------------------------------
 
     @classmethod
-    def fromBytes(cls, url_bytes):
+    def fromBytes(cls, url):
         try:
             super().fromBytes
         except AttributeError:
-            return cls.fromString(url_bytes)
+            return cls.fromString(url)
 
-        return cls.fromString(url_bytes.decode('ascii'))
+        return cls.fromString(url.decode('ascii'))
 
     # ---- Public methods ------------------------------------------------
 

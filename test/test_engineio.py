@@ -15,8 +15,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
 # ---- Imports -----------------------------------------------------------
 
@@ -43,7 +43,7 @@ from txsocketio.engineio import (
     encbinpayloadsgen,
     enceiopacket,
 )
-import test  # noqa: F401; pylint: disable=unused-import
+import test  # noqa: F401 # pylint: disable=unused-import
 
 # ---- Constants ---------------------------------------------------------
 
@@ -105,12 +105,6 @@ class PacketsTestCase(t_unittest.TestCase):
     BAD_TRUNC_PACKET = ''
 
     # ---- Public hooks --------------------------------------------------
-
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     @hypothesis.given(packet_type=strategies.sampled_from(EIO_TYPE_NAMES_BY_CODE), packet_data=strategies.binary() | strategies.text())
     def test_enc_dec(self, packet_type, packet_data):
@@ -225,12 +219,6 @@ class PayloadsTestCase(t_unittest.TestCase):
     BAD_TRUNC_PAYLOAD = bytes(b'\x00\x03\xff4')
 
     # ---- Public hooks --------------------------------------------------
-
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     def test_payload_dec(self):
         raw = PayloadsTestCase.GOOD_STR_PACKET_PAYLOAD
@@ -514,12 +502,6 @@ class TransportContextTestCase(t_unittest.TestCase):
     longMessage = True
 
     # ---- Public hooks --------------------------------------------------
-
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     def test_transport_context(self):
         base_url = b'http://dummy.dom/engine.io/'

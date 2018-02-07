@@ -14,8 +14,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.moves.urllib import parse as url_parse
 from future.utils import (
     iteritems,
@@ -803,21 +803,21 @@ class PollingTransport(_BaseTransport):
 
         return d
 
-    def _sessionrequest(self, payload=None, method=None, timeout=None):
+    def _sessionrequest(self, payload=None, req_method=None, timeout=None):
         request_count, url_bytes = self._nextrequesturl()
         headers = t_http_headers.Headers(self._headers)
 
         if payload is None:
-            method = method if method is not None else b'GET'
+            req_method = req_method if req_method is not None else b'GET'
             body_producer = None
-            _LOGGER.debug('%s-ing[%d] from <%s>', method, request_count, url_bytes.decode('utf_8'))
+            _LOGGER.debug('%s-ing[%d] from <%s>', req_method, request_count, url_bytes.decode('utf_8'))
         else:
-            method = method if method is not None else b'POST'
+            req_method = req_method if req_method is not None else b'POST'
             headers.addRawHeader(b'Content-Type', b'application/octet-stream')
             body_producer = t_client.FileBodyProducer(io.BytesIO(payload))
-            _LOGGER.debug('%s-ing[%d] %r to <%s>', method, request_count, payload, url_bytes.decode('utf_8'))
+            _LOGGER.debug('%s-ing[%d] %r to <%s>', req_method, request_count, payload, url_bytes.decode('utf_8'))
 
-        d = self._agent.request(method, url_bytes, headers, body_producer)
+        d = self._agent.request(req_method, url_bytes, headers, body_producer)
 
         if timeout is None:
             if self._transport_context is not None \

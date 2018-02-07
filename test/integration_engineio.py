@@ -15,8 +15,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 from future.moves.urllib import parse as url_parse
 from future.utils import itervalues
 
@@ -47,7 +47,7 @@ from txsocketio.engineio import (
     TransportContext,
     TransportStateError,
 )
-import test  # noqa: F401; pylint: disable=unused-import
+import test  # noqa: F401 # pylint: disable=unused-import
 from test.symmetries import mock
 
 # ---- Constants ---------------------------------------------------------
@@ -79,9 +79,6 @@ class BaseIntegrationTestCase(t_unittest.TestCase):
 
         self.close_handler = _close_handler
 
-    def tearDown(self):
-        super().tearDown()
-
     # ---- Public methods ------------------------------------------------
 
     def registermock(self, dispatcher):
@@ -103,9 +100,6 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
         self.transport = transport_factory.buildTransport(reactor)
         self.transport.register('close', self.close_handler)
         self.hander = self.registermock(self.transport)
-
-    def tearDown(self):
-        super().tearDown()
 
     @t_defer.inlineCallbacks
     def test_close_packet_after_upgrade_to_self(self):
@@ -276,12 +270,6 @@ class PollingTransportIntegrationTestCase(BaseIntegrationTestCase):
 class EngineIoIntegrationTestCase(BaseIntegrationTestCase):
 
     # ---- Public hooks --------------------------------------------------
-
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     @t_defer.inlineCallbacks
     def test_close_packet_after_started(self):

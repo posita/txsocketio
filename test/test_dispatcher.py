@@ -15,8 +15,8 @@ viewing or using this software in any capacity.
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-from builtins import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
-from future.builtins.disabled import *  # noqa: F401,F403; pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from builtins import *  # noqa: F401,F403 # pylint: disable=redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
+from future.builtins.disabled import *  # noqa: F401,F403 # pylint: disable=no-name-in-module,redefined-builtin,unused-wildcard-import,useless-suppression,wildcard-import
 
 # ---- Imports -----------------------------------------------------------
 
@@ -27,7 +27,7 @@ from twisted.internet import defer as t_defer
 from twisted.trial import unittest as t_unittest
 
 from txsocketio.dispatcher import Dispatcher
-import test  # noqa: F401; pylint: disable=unused-import
+import test  # noqa: F401 # pylint: disable=unused-import
 from test.symmetries import mock
 
 # ---- Constants ---------------------------------------------------------
@@ -50,12 +50,6 @@ class DispatcherTestCase(t_unittest.TestCase):
     longMessage = True
 
     # ---- Public hooks --------------------------------------------------
-
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     @mock.patch('txsocketio.dispatcher._LOGGER')
     def test_dispatch_exception(self, _LOGGER):
@@ -141,11 +135,11 @@ class DispatcherTestCase(t_unittest.TestCase):
 
         def _handler(i, event):
             try:
-                l = results[i]
+                _results_by_i = results[i]
             except KeyError:
-                l = results[i] = []
+                _results_by_i = results[i] = []
 
-            l.append(event)
+            _results_by_i.append(event)
 
         _handler1 = functools.partial(_handler, 1)
         _handler2 = functools.partial(_handler, 2)
