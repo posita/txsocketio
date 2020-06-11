@@ -1,0 +1,108 @@
+#-*- encoding: utf-8; grammar-ext: rb; mode: ruby -*-
+
+#=========================================================================
+# Copyright (c) 2015 Matt Bogosian <matt@bogosian.net>.
+#
+# Please see the accompanying LICENSE (or LICENSE.txt) file for rights and
+# restrictions governing use of this software. All rights not expressly
+# waived or licensed are reserved. If such a file did not accompany this
+# software, then please contact the author before viewing or using this
+# software in any capacity.
+#=========================================================================
+
+require('fileutils')
+require('pathname')
+
+unless defined? B2DHelper
+    module B2DHelper
+        VAGRANTFILE_API_VERSION = '2'
+        VM_CPUS = (ENV['VM_CPUS'] || 2).to_i
+        VM_MEM = (ENV['VM_MEM'] || 2048).to_i
+        VM_IP_ADDR = ENV['VM_IP_ADDR'] || '10.98.50.100' # 10.'b'.'2'.'d', get it? ;o)
+
+        ATTENTION_LINE = '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+        CERTS_DIRNAME = '.b2dcerts'
+        CERTS_DIR = File.join(FileUtils.pwd(), CERTS_DIRNAME)
+
+        module_function
+        def cleancerts()
+            puts('removing old PEM files...')
+
+            Dir.glob(File.join(CERTS_DIR, '*.pem')).each() do |pem|
+                File.unlink(pem)
+                puts(pem)
+            end
+        end
+    end
+end
+
+Vagrant.configure(B2DHelper::VAGRANTFILE_API_VERSION) do |config|
+    config.vm.define(:txsocketio_b2d) do |txsocketio_b2d|
+        txsocketio_b2d.vm.network(:private_network, ip: B2DHelper::VM_IP_ADDR)
+
+        txsocketio_b2d.vm.synced_folder('.', '/vagrant', disabled: true)
+        txsocketio_b2d.vm.synced_folder(FileUtils.pwd(), '/vagrant', create: true, disabled: false, id: 'Vagrant', nfs: true, mount_options: [ 'nolock,sync' ])
+        # See Parallels/boot2docker-vagrant-box#14
+        txsocketio_b2d.vm.synced_folder('/Users', '/Users', disabled: true)
+        home_path = Dir.home()
+        txsocketio_b2d.vm.synced_folder(home_path, home_path, create: true, disabled: false, id: 'Home', nfs: true, mount_options: [ 'nolock,sync' ])
+
+        txsocketio_b2d.ssh.username = 'docker'
+        txsocketio_b2d.ssh.password = 'tcuser'
+        txsocketio_b2d.ssh.insert_key = true
+
+        txsocketio_b2d.trigger.before(:provision) do
+            B2DHelper::cleancerts()
+        end
+
+        # See <http://tinyurl.com/nz4tgy6>
+        txsocketio_b2d.vm.provision :shell, inline: "set -e ; while ! docker >/dev/null ps --quiet ; do echo 'Waiting for Docker to come alive so we can kill it...' ; sleep 1 ; done ; sudo /etc/init.d/docker stop ; sudo rm -f /var/lib/boot2docker/tls/*.pem ~docker/.docker/*.pem ; sudo /etc/init.d/docker restart ; while ! docker >/dev/null ps --quiet ; do echo 'Waiting for Docker to come alive again so we can steal its keys...' ; sleep 1 ; done ; echo 'It lives!' ; [ -z \"$( find ~docker/.docker -name '*.pem' 2>/dev/null )\" ] || cp -Rv ~docker/.docker/*.pem '/vagrant/#{B2DHelper::CERTS_DIRNAME}'", privileged: true
+
+        txsocketio_b2d.trigger.after(:destroy) do
+            B2DHelper::cleancerts()
+        end
+
+        txsocketio_b2d.trigger.after(:up) do
+            puts(B2DHelper::ATTENTION_LINE)
+            puts('Don\'t forget about DOCKER_HOST, etc. If TLS is enabled in boot2docker:')
+            puts()
+            puts("    export DOCKER_CERT_PATH='#{B2DHelper::CERTS_DIR}'")
+            puts("    export DOCKER_HOST=tcp://#{B2DHelper::VM_IP_ADDR}:2376")
+            puts("    export DOCKER_TLS_VERIFY=1")
+            puts()
+            puts('Alternately, if TLS is not enabled in boot2docker:')
+            puts()
+            puts("    export DOCKER_HOST=tcp://#{B2DHelper::VM_IP_ADDR}:2375")
+            puts(B2DHelper::ATTENTION_LINE)
+        end
+
+        txsocketio_b2d.trigger.after([ :destroy, :halt, :suspend ]) do
+            puts(B2DHelper::ATTENTION_LINE)
+            puts('Don\'t forget about DOCKER_HOST, etc.:')
+            puts()
+            puts("    unset DOCKER_CERT_PATH DOCKER_HOST DOCKER_TLS_VERIFY")
+            puts(B2DHelper::ATTENTION_LINE)
+        end
+
+        txsocketio_b2d.vm.provider(:parallels) do |v, override|
+            v.name = 'txsocketio_b2d'
+            override.vm.box = 'parallels/boot2docker'
+
+            # See <https://parallels.github.io/vagrant-parallels/docs/configuration.html>
+            v.cpus = B2DHelper::VM_CPUS
+            v.memory = B2DHelper::VM_MEM
+        end
+
+        txsocketio_b2d.vm.provider(:virtualbox) do |v, override|
+            v.name = 'txsocketio_b2d'
+            override.vm.box = 'dduportal/boot2docker'
+
+            # See <https://docs.vagrantup.com/v2/virtualbox/configuration.html>
+            v.cpus = B2DHelper::VM_CPUS
+            v.memory = B2DHelper::VM_MEM
+            v.customize [ 'modifyvm', :id, '--cpuexecutioncap', '50' ]
+            v.customize [ 'modifyvm', :id, '--nictype1', 'virtio' ]
+            v.customize [ 'modifyvm', :id, '--nictype2', 'virtio' ]
+        end
+    end
+end
